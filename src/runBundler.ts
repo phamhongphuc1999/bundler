@@ -9,9 +9,9 @@ import { resolveConfiguration } from './Config';
 import { DebugMethodHandler } from './DebugMethodHandler';
 import { initServer } from './modules/initServer';
 import { supportsDebugTraceCall } from './modules/ValidationManager';
-import { type IEntryPoint } from './typechain';
+import { IEntryPoint__factory, type IEntryPoint } from './typechain';
 import { UserOpMethodHandler } from './UserOpMethodHandler';
-import { RpcError, supportsRpcMethod } from './utils/Utils';
+import { erc4337RuntimeVersion, RpcError, supportsRpcMethod } from './utils/Utils';
 
 // this is done so that console.log outputs BigNumber as hex string instead of unreadable object
 export const inspectCustomSymbol = Symbol.for('nodejs.util.inspect.custom');
@@ -20,7 +20,7 @@ ethers.BigNumber.prototype[inspectCustomSymbol] = function () {
   return `BigNumber ${parseInt(this._hex)}`;
 };
 
-const CONFIG_FILE_NAME = 'workdir/bundler.config.json';
+const CONFIG_FILE_NAME = './localconfig/bunlder.config.json';
 
 export let showStackTraces = false;
 
@@ -28,8 +28,7 @@ export async function connectContracts(
   wallet: Signer,
   entryPointAddress: string,
 ): Promise<{ entryPoint: IEntryPoint }> {
-  const entryPoint = '0x';
-  return { entryPoint };
+  return { entryPoint: IEntryPoint__factory.connect(entryPointAddress, wallet) };
 }
 
 /**
@@ -58,7 +57,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
   }
 
   program
-    .version('1')
+    .version(erc4337RuntimeVersion)
     .option('--beneficiary <string>', 'address to receive funds')
     .option('--gasFactor <number>')
     .option(
@@ -94,19 +93,13 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     process.exit(1);
   }
   const { config, provider, wallet } = await resolveConfiguration(programOpts);
-
-  const {
-    // name: chainName,
-    chainId,
-  } = await provider.getNetwork();
-
+  const { chainId } = await provider.getNetwork();
   if (chainId === 31337 || chainId === 1337) {
     if (config.debugRpc == null) {
       console.log('== debugrpc was', config.debugRpc);
       config.debugRpc = true;
-    } else {
-      console.log('== debugrpc already st', config.debugRpc);
-    }
+    } else console.log('== debugrpc already st', config.debugRpc);
+
     // const ep = await deployEntryPoint(provider as any);
     // const addr = ep.address;
     console.log('deployed EntryPoint at', 'addr');
@@ -126,7 +119,8 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     );
     process.exit(1);
   }
-  if (!config.unsafe && !(await supportsDebugTraceCall(provider as any))) {
+  const isDebug = await supportsDebugTraceCall(provider as JsonRpcProvider);
+  if (!config.unsafe && !isDebug) {
     console.error(
       'FATAL: full validation requires a node with debug_traceCall. for local UNSAFE mode: use --unsafe',
     );

@@ -175,3 +175,4 @@ dist
 .DS_Store
 
 typechain/
+localconfig/private-key.txt

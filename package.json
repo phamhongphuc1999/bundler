@@ -2,6 +2,9 @@
   "name": "bundler",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "compile": "bun build ./index.ts --outfile=bundle.js"
+  },
   "dependencies": {
     "@ethersproject/properties": "^5.7.0",
     "@ethersproject/providers": "^5.7.0",

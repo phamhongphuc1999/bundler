@@ -9,9 +9,7 @@ export * from './ValidationManager';
 
 export async function supportsDebugTraceCall(provider: JsonRpcProvider): Promise<boolean> {
   const p = provider.send as any;
-  if (p._clientVersion == null) {
-    p._clientVersion = await provider.send('web3_clientVersion', []);
-  }
+  if (p._clientVersion == null) p._clientVersion = await provider.send('web3_clientVersion', []);
 
   // make sure we can trace a call.
   const ret = await debug_traceCall(

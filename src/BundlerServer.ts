@@ -1,19 +1,18 @@
+import { Provider } from '@ethersproject/providers';
 import bodyParser from 'body-parser';
 import cors from 'cors';
-import express, { type Express, type Response, type Request } from 'express';
-import { Provider } from '@ethersproject/providers';
+import Debug from 'debug';
 import { Signer, utils } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
-import { type BundlerConfig } from './BundlerConfig';
-import { UserOpMethodHandler } from './UserOpMethodHandler';
+import express, { type Express, type Request, type Response } from 'express';
 import { Server } from 'http';
+import { type BundlerConfig } from './BundlerConfig';
 import { DebugMethodHandler } from './DebugMethodHandler';
-
-import Debug from 'debug';
-import { AddressZero, deepHexlify, packUserOp, type UserOperation } from './utils/ERC4337Utils';
+import { UserOpMethodHandler } from './UserOpMethodHandler';
 import { IEntryPoint__factory } from './typechain';
-import { decodeRevertReason } from './utils/decodeRevertReason';
+import { AddressZero, deepHexlify, packUserOp, type UserOperation } from './utils/ERC4337Utils';
 import { RpcError, erc4337RuntimeVersion } from './utils/Utils';
+import { decodeRevertReason } from './utils/decodeRevertReason';
 
 const debug = Debug('aa.rpc');
 export class BundlerServer {
@@ -34,8 +33,6 @@ export class BundlerServer {
 
     this.app.get('/', this.intro.bind(this));
     this.app.post('/', this.intro.bind(this));
-
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.app.post('/rpc', this.rpc.bind(this));
 
     this.httpServer = this.app.listen(this.config.port);
@@ -69,7 +66,6 @@ export class BundlerServer {
       maxPriorityFeePerGas: 0,
       signature: '0x',
     };
-    // await EntryPoint__factory.connect(this.config.entryPoint,this.provider).callStatic.addStake(0)
     try {
       await IEntryPoint__factory.connect(
         this.config.entryPoint,

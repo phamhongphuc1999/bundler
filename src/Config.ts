@@ -45,7 +45,6 @@ export async function resolveConfiguration(
   console.log('Merged configuration:', JSON.stringify(config));
 
   if (config.network === 'hardhat') {
-    // eslint-disable-next-line
     const provider: JsonRpcProvider = require('hardhat').ethers.provider;
     return { config, provider, wallet: provider.getSigner() };
   }
@@ -55,7 +54,8 @@ export async function resolveConfiguration(
   let wallet: Wallet;
   try {
     mnemonic = fs.readFileSync(config.mnemonic, 'ascii').trim();
-    wallet = Wallet.fromMnemonic(mnemonic).connect(provider);
+    // wallet = Wallet.fromMnemonic(mnemonic).connect(provider);
+    wallet = new Wallet(mnemonic, provider);
   } catch (e: any) {
     throw new Error(`Unable to read --mnemonic ${config.mnemonic}: ${e.message as string}`);
   }

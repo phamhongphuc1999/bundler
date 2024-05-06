@@ -1,0 +1,14 @@
+{
+  "gasFactor": "1",
+  "port": "3000",
+  "network": "https://api.tatum.io/v3/blockchain/node/bsc-testnet",
+  "entryPoint": "0x3c123A703F1773C3cf5BdD6D000fd3Db466Cb4B9",
+  "beneficiary": "0xac7367fe5423f5134039b446D4B9dD9C06f57826",
+  "minBalance": "0.1",
+  "mnemonic": "./localconfig/private-key.txt",
+  "maxBundleGas": 5e6,
+  "minStake": "1",
+  "minUnstakeDelay": 0,
+  "autoBundleInterval": 3,
+  "autoBundleMempoolSize": 10
+}
