@@ -148,7 +148,6 @@ export class BundleManager {
 
   // fatal errors we know we can't recover
   checkFatal(e: any): void {
-    // console.log('ex entries=',Object.entries(e))
     if (e.error?.code === -32601) {
       throw e;
     }
@@ -213,7 +212,6 @@ export class BundleManager {
         validationResult = await this.validationManager.validateUserOp(
           entry.userOp,
           entry.referencedContracts,
-          false,
         );
       } catch (e: any) {
         debug('failed 2nd validation:', e.message);

@@ -33,7 +33,6 @@ export class ExecutionManager {
    */
   async sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<void> {
     await this.mutex.runExclusive(async () => {
-      debug('sendUserOperation');
       this.validationManager.validateInputParameters(userOp, entryPointInput);
       const validationResult = await this.validationManager.validateUserOp(userOp, undefined);
       const userOpHash = await this.validationManager.entryPoint.getUserOpHash(packUserOp(userOp));
@@ -54,9 +53,8 @@ export class ExecutionManager {
   setReputationCron(interval: number): void {
     debug('set reputation interval to', interval);
     clearInterval(this.reputationCron);
-    if (interval !== 0) {
+    if (interval !== 0)
       this.reputationCron = setInterval(() => this.reputationManager.hourlyCron(), interval);
-    }
   }
 
   /**

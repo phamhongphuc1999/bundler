@@ -188,10 +188,6 @@ export class ValidationManager {
         ValidationErrors.SimulateValidation,
       );
     }
-    // // Hack to handle SELFDESTRUCT until we fix entrypoint
-    // if (data === '0x') {
-    //   return [data as any, tracerResult]
-    // }
     try {
       const [decodedSimulations] = entryPointSimulations.decodeFunctionResult(
         'simulateValidation',
@@ -206,15 +202,9 @@ export class ValidationManager {
           .replace(new RegExp(getAddr(userOp.paymaster) ?? '--no-paymaster--'), '{paymaster}')
           .replace(new RegExp(getAddr(userOp.factory) ?? '--no-initcode--'), '{factory}'),
       );
-      // console.log('==debug=', ...tracerResult.numberLevels.forEach(x=>x.access), 'sender=', userOp.sender, 'paymaster=', hexlify(userOp.paymasterAndData)?.slice(0, 42))
-      // errorResult is "ValidationResult"
       return [validationResult, tracerResult];
     } catch (e: any) {
-      // if already parsed, throw as is
-      if (e.code != null) {
-        throw e;
-      }
-      // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
+      if (e.code != null) throw e;
       const err = decodeErrorReason(e);
       throw new RpcError(err != null ? err.message : data, -32000);
     }
@@ -229,11 +219,9 @@ export class ValidationManager {
   async validateUserOp(
     userOp: UserOperation,
     previousCodeHashes?: ReferencedCodeHashes,
-    checkStakes = true,
   ): Promise<ValidateUserOpResult> {
     if (previousCodeHashes != null && previousCodeHashes.addresses.length > 0) {
       const { hash: codeHashes } = await this.getCodeHashes(previousCodeHashes.addresses);
-      // [COD-010]
       requireCond(
         codeHashes === previousCodeHashes.hash,
         'modified code after first validation',
@@ -241,10 +229,7 @@ export class ValidationManager {
       );
     }
     let res: ValidationResult;
-    let codeHashes: ReferencedCodeHashes = {
-      addresses: [],
-      hash: '',
-    };
+    let codeHashes: ReferencedCodeHashes = { addresses: [], hash: '' };
     let storageMap: StorageMap = {};
     if (!this.unsafe) {
       let tracerResult: BundlerTracerResult;
@@ -258,18 +243,10 @@ export class ValidationManager {
         res,
         this.entryPoint,
       );
-      // if no previous contract hashes, then calculate hashes of contracts
-      if (previousCodeHashes == null) {
-        codeHashes = await this.getCodeHashes(contractAddresses);
-      }
-      if ((res as any) === '0x') {
+      if (previousCodeHashes == null) codeHashes = await this.getCodeHashes(contractAddresses);
+      if ((res as any) === '0x')
         throw new Error('simulateValidation reverted with no revert string!');
-      }
-    } else {
-      // NOTE: this mode doesn't do any opcode checking and no stake checking!
-      res = await this._callSimulateValidation(userOp);
-    }
-
+    } else res = await this._callSimulateValidation(userOp);
     requireCond(
       !res.returnInfo.sigFailed,
       'Invalid UserOp signature or paymaster signature',
@@ -310,11 +287,7 @@ export class ValidationManager {
       ValidationErrors.SimulateValidation,
     );
 
-    return {
-      ...res,
-      referencedContracts: codeHashes,
-      storageMap,
-    };
+    return { ...res, referencedContracts: codeHashes, storageMap };
   }
 
   async getCodeHashes(addresses: string[]): Promise<ReferencedCodeHashes> {

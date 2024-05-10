@@ -204,16 +204,11 @@ export class UserOpMethodHandler {
 
   async sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<string> {
     await this._validateParameters(userOp, entryPointInput);
-
-    console.log(
-      `UserOperation: Sender=${userOp.sender}  Nonce=${tostr(userOp.nonce)} EntryPoint=${entryPointInput} Paymaster=${userOp.paymaster ?? ''}`,
-    );
     await this.execManager.sendUserOperation(userOp, entryPointInput);
     return await this.entryPoint.getUserOpHash(packUserOp(userOp));
   }
 
   async _getUserOperationEvent(userOpHash: string): Promise<UserOperationEventEvent> {
-    // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
     const event = await this.entryPoint.queryFilter(
       this.entryPoint.filters.UserOperationEvent(userOpHash),
     );

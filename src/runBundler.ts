@@ -78,7 +78,6 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
 
   const programOpts = program.parse(argv).opts();
   showStackTraces = programOpts.showStackTraces;
-
   console.log('command-line arguments: ', program.opts());
 
   if (programOpts.createMnemonic != null) {
@@ -164,14 +163,10 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     console.log(
       'connected to network',
       await provider.getNetwork().then((net: { name: any; chainId: any }) => {
-        return {
-          name: net.name,
-          chainId: net.chainId,
-        };
+        return { name: net.name, chainId: net.chainId };
       }),
     );
     console.log(`running on http://localhost:${config.port}/rpc`);
   });
-
   return bundlerServer;
 }

@@ -44,10 +44,10 @@ export async function resolveConfiguration(
   const config = mergeConfigs(bundlerConfigDefault, fileConfig, commandLineParams);
   console.log('Merged configuration:', JSON.stringify(config));
 
-  if (config.network === 'hardhat') {
-    const provider: JsonRpcProvider = require('hardhat').ethers.provider;
-    return { config, provider, wallet: provider.getSigner() };
-  }
+  // if (config.network === 'hardhat') {
+  //   const provider: JsonRpcProvider = require('hardhat').ethers.provider;
+  //   return { config, provider, wallet: provider.getSigner() };
+  // }
 
   const provider: BaseProvider = getNetworkProvider(config.network);
   let mnemonic: string;

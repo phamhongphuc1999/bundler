@@ -103,18 +103,11 @@ export class BundlerServer {
       for (const reqItem of req.body) {
         resContent.push(await this.handleRpc(reqItem));
       }
-    } else {
-      resContent = await this.handleRpc(req.body);
-    }
-
+    } else resContent = await this.handleRpc(req.body);
     try {
       res.send(resContent);
     } catch (err: any) {
-      const error = {
-        message: err.message,
-        data: err.data,
-        code: err.code,
-      };
+      const error = { message: err.message, data: err.data, code: err.code };
       this.log('failed: ', 'rpc::res.send()', 'error:', JSON.stringify(error));
     }
   }
@@ -126,24 +119,12 @@ export class BundlerServer {
       const result = deepHexlify(await this.handleMethod(method, params));
       debug('sent', method, '-', result);
       debug('<<', { jsonrpc, id, result });
-      return {
-        jsonrpc,
-        id,
-        result,
-      };
+      return { jsonrpc, id, result };
     } catch (err: any) {
-      const error = {
-        message: err.message,
-        data: err.data,
-        code: err.code,
-      };
+      const error = { message: err.message, data: err.data, code: err.code };
       this.log('failed: ', method, 'error:', JSON.stringify(error), err);
       debug('<<', { jsonrpc, id, error });
-      return {
-        jsonrpc,
-        id,
-        error,
-      };
+      return { jsonrpc, id, error };
     }
   }
 
@@ -151,7 +132,6 @@ export class BundlerServer {
     let result: any;
     switch (method) {
       case 'eth_chainId':
-        // eslint-disable-next-line no-case-declarations
         const { chainId } = await this.provider.getNetwork();
         result = chainId;
         break;
@@ -219,8 +199,6 @@ export class BundlerServer {
   }
 
   log(...params: any[]): void {
-    if (!this.silent) {
-      console.log(...arguments);
-    }
+    if (!this.silent) console.log(...arguments);
   }
 }

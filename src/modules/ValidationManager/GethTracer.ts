@@ -36,7 +36,7 @@ export async function debug_traceCall(
     );
     throw e;
   });
-  // return applyTracer(ret, options)
+  console.log('🚀 ~ ret:', ret);
   return ret;
 }
 
@@ -77,11 +77,7 @@ export function getTracerBodyString(func: LogTracerFunc): string {
     throw new Error('Not a simple method returning value');
   }
   let ret = match[1];
-  ret = ret
-    // .replace(/\/\/.*\n/g,'\n')
-    // .replace(/\n\s*\n/g, '\n')
-    .replace(/\b(?:const|let)\b/g, '');
-  // console.log('== tracer source',ret.split('\n').map((line,index)=>`${index}: ${line}`).join('\n'))
+  ret = ret.replace(/\b(?:const|let)\b/g, '');
   return ret;
 }
 
