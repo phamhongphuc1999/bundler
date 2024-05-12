@@ -1,13 +1,14 @@
 import Debug from 'debug';
 import { BigNumber, type BigNumberish } from 'ethers';
-import type { UserOperation } from '../utils/ERC4337Utils';
 import {
   RpcError,
   ValidationErrors,
+  getAddr,
   requireCond,
   type ReferencedCodeHashes,
   type StakeInfo,
-} from '../utils/Utils';
+  type UserOperation,
+} from '../utils';
 import { ReputationManager } from './ReputationManager';
 
 const debug = Debug('aa.mempool');
@@ -64,7 +65,7 @@ export class MempoolManager {
 
   // add userOp into the mempool, after initial validation.
   // replace existing, if any (and if new gas is higher)
-  // reverts if unable to add UserOp to mempool (too many UserOps with this sender)
+  // revets if unable to add UserOp to mempool (too many UserOps with this sender)
   addUserOp(
     userOp: UserOperation,
     userOpHash: string,
@@ -91,11 +92,13 @@ export class MempoolManager {
     } else {
       debug('add userOp', userOp.sender, userOp.nonce);
       this.incrementEntryCount(userOp.sender);
-      if (userOp.paymaster != null) {
-        this.incrementEntryCount(userOp.paymaster);
+      const paymaster = getAddr(userOp.paymasterAndData);
+      if (paymaster != null) {
+        this.incrementEntryCount(paymaster);
       }
-      if (userOp.factory != null) {
-        this.incrementEntryCount(userOp.factory);
+      const factory = getAddr(userOp.initCode);
+      if (factory != null) {
+        this.incrementEntryCount(factory);
       }
       this.checkReputation(senderInfo, paymasterInfo, factoryInfo, aggregatorInfo);
       this.checkMultipleRolesViolation(userOp);
@@ -116,8 +119,8 @@ export class MempoolManager {
       if (!(e instanceof RpcError)) throw e;
     }
     this.reputationManager.updateSeenStatus(aggregator);
-    this.reputationManager.updateSeenStatus(userOp.paymaster);
-    this.reputationManager.updateSeenStatus(userOp.factory);
+    this.reputationManager.updateSeenStatus(getAddr(userOp.paymasterAndData));
+    this.reputationManager.updateSeenStatus(getAddr(userOp.initCode));
   }
 
   // TODO: de-duplicate code
@@ -152,20 +155,20 @@ export class MempoolManager {
     );
 
     const knownSenders = this.getKnownSenders();
-    const paymaster = userOp.paymaster;
-    const factory = userOp.factory;
+    const paymaster = getAddr(userOp.paymasterAndData)?.toLowerCase();
+    const factory = getAddr(userOp.initCode)?.toLowerCase();
 
     const isPaymasterSenderViolation = knownSenders.includes(paymaster?.toLowerCase() ?? '');
     const isFactorySenderViolation = knownSenders.includes(factory?.toLowerCase() ?? '');
 
     requireCond(
       !isPaymasterSenderViolation,
-      `A Paymaster at ${paymaster as string} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
+      `A Paymaster at ${paymaster} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
       ValidationErrors.OpcodeValidation,
     );
     requireCond(
       !isFactorySenderViolation,
-      `A Factory at ${factory as string} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
+      `A Factory at ${factory} in this UserOperation is used as a sender entity in another UserOperation currently in mempool.`,
       ValidationErrors.OpcodeValidation,
     );
   }
@@ -254,8 +257,8 @@ export class MempoolManager {
       debug('removeUserOp', userOp.sender, userOp.nonce);
       this.mempool.splice(index, 1);
       this.decrementEntryCount(userOp.sender);
-      this.decrementEntryCount(userOp.paymaster);
-      this.decrementEntryCount(userOp.factory);
+      this.decrementEntryCount(getAddr(userOp.paymasterAndData));
+      this.decrementEntryCount(getAddr(userOp.initCode));
       // TODO: store and remove aggregator entity count
     }
   }
@@ -291,9 +294,16 @@ export class MempoolManager {
   getKnownEntities(): string[] {
     const res = [];
     const userOps = this.mempool;
-    res.push(...userOps.map((it) => it.userOp.paymaster));
-    res.push(...userOps.map((it) => it.userOp.factory));
-
+    res.push(
+      ...userOps.map((it) => {
+        return getAddr(it.userOp.paymasterAndData);
+      }),
+    );
+    res.push(
+      ...userOps.map((it) => {
+        return getAddr(it.userOp.initCode);
+      }),
+    );
     return res.filter((it) => it != null).map((it) => (it as string).toLowerCase());
   }
 }

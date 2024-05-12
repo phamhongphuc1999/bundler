@@ -1,6 +1,6 @@
 import { JsonRpcProvider } from '@ethersproject/providers';
-import { IEntryPoint__factory } from '../../typechain';
-import { AddressZero, type UserOperation } from '../../utils/ERC4337Utils';
+import { IEntryPoint__factory } from '../typechain';
+import { AddressZero, type UserOperation } from '../utils';
 import { bundlerCollectorTracer } from './BundlerCollectorTracer';
 import { debug_traceCall } from './GethTracer';
 import { ValidationManager, type ValidateUserOpResult } from './ValidationManager';
@@ -9,7 +9,9 @@ export * from './ValidationManager';
 
 export async function supportsDebugTraceCall(provider: JsonRpcProvider): Promise<boolean> {
   const p = provider.send as any;
-  if (p._clientVersion == null) p._clientVersion = await provider.send('web3_clientVersion', []);
+  if (p._clientVersion == null) {
+    p._clientVersion = await provider.send('web3_clientVersion', []);
+  }
 
   // make sure we can trace a call.
   const ret = await debug_traceCall(

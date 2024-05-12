@@ -1,3 +1,4 @@
+import { EntryPoint__factory, type UserOperationStruct } from '@account-abstraction/contracts';
 import { Provider } from '@ethersproject/providers';
 import bodyParser from 'body-parser';
 import cors from 'cors';
@@ -9,16 +10,12 @@ import { Server } from 'http';
 import { type BundlerConfig } from './BundlerConfig';
 import { DebugMethodHandler } from './DebugMethodHandler';
 import { UserOpMethodHandler } from './UserOpMethodHandler';
-import { IEntryPoint__factory } from './typechain';
-import { AddressZero, deepHexlify, packUserOp, type UserOperation } from './utils/ERC4337Utils';
-import { RpcError, erc4337RuntimeVersion } from './utils/Utils';
-import { decodeRevertReason } from './utils/decodeRevertReason';
+import { AddressZero, RpcError, deepHexlify, erc4337RuntimeVersion } from './utils';
 
 const debug = Debug('aa.rpc');
 export class BundlerServer {
   app: Express;
   private readonly httpServer: Server;
-  public silent = false;
 
   constructor(
     readonly methodHandler: UserOpMethodHandler,
@@ -33,6 +30,8 @@ export class BundlerServer {
 
     this.app.get('/', this.intro.bind(this));
     this.app.post('/', this.intro.bind(this));
+
+    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.app.post('/rpc', this.rpc.bind(this));
 
     this.httpServer = this.app.listen(this.config.port);
@@ -55,9 +54,11 @@ export class BundlerServer {
     }
 
     // minimal UserOp to revert with "FailedOp"
-    const emptyUserOp: UserOperation = {
+    const emptyUserOp: UserOperationStruct = {
       sender: AddressZero,
       callData: '0x',
+      initCode: AddressZero,
+      paymasterAndData: '0x',
       nonce: 0,
       preVerificationGas: 0,
       verificationGasLimit: 100000,
@@ -66,24 +67,20 @@ export class BundlerServer {
       maxPriorityFeePerGas: 0,
       signature: '0x',
     };
-    try {
-      await IEntryPoint__factory.connect(
-        this.config.entryPoint,
-        this.provider,
-      ).callStatic.getUserOpHash(packUserOp(emptyUserOp));
-    } catch (e: any) {
-      this.fatal(
-        `Invalid entryPoint contract at ${this.config.entryPoint}. wrong version? ${decodeRevertReason(e, false) as string}`,
-      );
+    // await EntryPoint__factory.connect(this.config.entryPoint,this.provider).callStatic.addStake(0)
+    const err = await EntryPoint__factory.connect(this.config.entryPoint, this.provider)
+      .callStatic.simulateValidation(emptyUserOp)
+      .catch((e) => e);
+    if (err?.errorName !== 'FailedOp') {
+      this.fatal(`Invalid entryPoint contract at ${this.config.entryPoint}. wrong version?`);
     }
-
     const signerAddress = await this.wallet.getAddress();
     const bal = await this.provider.getBalance(signerAddress);
-    this.log('signer', signerAddress, 'balance', utils.formatEther(bal));
+    console.log('signer', signerAddress, 'balance', utils.formatEther(bal));
     if (bal.eq(0)) {
       this.fatal('cannot run with zero balance');
     } else if (bal.lt(parseEther(this.config.minBalance))) {
-      this.log('WARNING: initial balance below --minBalance ', this.config.minBalance);
+      console.log('WARNING: initial balance below --minBalance ', this.config.minBalance);
     }
   }
 
@@ -103,12 +100,19 @@ export class BundlerServer {
       for (const reqItem of req.body) {
         resContent.push(await this.handleRpc(reqItem));
       }
-    } else resContent = await this.handleRpc(req.body);
+    } else {
+      resContent = await this.handleRpc(req.body);
+    }
+
     try {
       res.send(resContent);
     } catch (err: any) {
-      const error = { message: err.message, data: err.data, code: err.code };
-      this.log('failed: ', 'rpc::res.send()', 'error:', JSON.stringify(error));
+      const error = {
+        message: err.message,
+        data: err.data,
+        code: err.code,
+      };
+      console.log('failed: ', 'rpc::res.send()', 'error:', JSON.stringify(error));
     }
   }
 
@@ -117,14 +121,26 @@ export class BundlerServer {
     debug('>>', { jsonrpc, id, method, params });
     try {
       const result = deepHexlify(await this.handleMethod(method, params));
-      debug('sent', method, '-', result);
+      console.log('sent', method, '-', result);
       debug('<<', { jsonrpc, id, result });
-      return { jsonrpc, id, result };
+      return {
+        jsonrpc,
+        id,
+        result,
+      };
     } catch (err: any) {
-      const error = { message: err.message, data: err.data, code: err.code };
-      this.log('failed: ', method, 'error:', JSON.stringify(error), err);
+      const error = {
+        message: err.message,
+        data: err.data,
+        code: err.code,
+      };
+      console.log('failed: ', method, 'error:', JSON.stringify(error));
       debug('<<', { jsonrpc, id, error });
-      return { jsonrpc, id, error };
+      return {
+        jsonrpc,
+        id,
+        error,
+      };
     }
   }
 
@@ -132,6 +148,7 @@ export class BundlerServer {
     let result: any;
     switch (method) {
       case 'eth_chainId':
+        // eslint-disable-next-line no-case-declarations
         const { chainId } = await this.provider.getNetwork();
         result = chainId;
         break;
@@ -196,9 +213,5 @@ export class BundlerServer {
         throw new RpcError(`Method ${method} is not supported`, -32601);
     }
     return result;
-  }
-
-  log(...params: any[]): void {
-    if (!this.silent) console.log(...arguments);
   }
 }

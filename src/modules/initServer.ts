@@ -1,14 +1,14 @@
+import { EntryPoint__factory } from '@account-abstraction/contracts';
 import { Signer } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import { type BundlerConfig } from '../BundlerConfig';
 import { getNetworkProvider } from '../Config';
-import { IEntryPoint__factory } from '../typechain';
+import { ValidationManager } from '../validation-manager';
 import { BundleManager } from './BundleManager';
 import { EventsManager } from './EventsManager';
 import { ExecutionManager } from './ExecutionManager';
 import { MempoolManager } from './MempoolManager';
 import { BundlerReputationParams, ReputationManager } from './ReputationManager';
-import { ValidationManager } from './ValidationManager';
 
 /**
  * initialize server modules.
@@ -20,7 +20,7 @@ export function initServer(
   config: BundlerConfig,
   signer: Signer,
 ): [ExecutionManager, EventsManager, ReputationManager, MempoolManager] {
-  const entryPoint = IEntryPoint__factory.connect(config.entryPoint, signer);
+  const entryPoint = EntryPoint__factory.connect(config.entryPoint, signer);
   const reputationManager = new ReputationManager(
     getNetworkProvider(config.network),
     BundlerReputationParams,

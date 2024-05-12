@@ -1,11 +1,11 @@
 import { Mutex } from 'async-mutex';
 import Debug from 'debug';
 import { clearInterval } from 'timers';
-import { packUserOp, type UserOperation } from '../utils/ERC4337Utils';
+import { type UserOperation } from '../utils';
+import { ValidationManager } from '../validation-manager';
 import { BundleManager, type SendBundleReturn } from './BundleManager';
 import { MempoolManager } from './MempoolManager';
 import { ReputationManager } from './ReputationManager';
-import type { ValidationManager } from './ValidationManager';
 
 const debug = Debug('aa.exec');
 
@@ -33,9 +33,10 @@ export class ExecutionManager {
    */
   async sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<void> {
     await this.mutex.runExclusive(async () => {
+      debug('sendUserOperation');
       this.validationManager.validateInputParameters(userOp, entryPointInput);
       const validationResult = await this.validationManager.validateUserOp(userOp, undefined);
-      const userOpHash = await this.validationManager.entryPoint.getUserOpHash(packUserOp(userOp));
+      const userOpHash = await this.validationManager.entryPoint.getUserOpHash(userOp);
       this.mempoolManager.addUserOp(
         userOp,
         userOpHash,
@@ -53,8 +54,9 @@ export class ExecutionManager {
   setReputationCron(interval: number): void {
     debug('set reputation interval to', interval);
     clearInterval(this.reputationCron);
-    if (interval !== 0)
+    if (interval !== 0) {
       this.reputationCron = setInterval(() => this.reputationManager.hourlyCron(), interval);
+    }
   }
 
   /**

@@ -1,5 +1,6 @@
+import { type UserOperationStruct } from '@account-abstraction/contracts';
 import { arrayify, hexlify } from 'ethers/lib/utils';
-import { encodeUserOp, packUserOp, type UserOperation } from '../utils/ERC4337Utils';
+import { packUserOp, type NotPromise } from '../utils';
 
 export interface GasOverheads {
   /**
@@ -58,18 +59,18 @@ export const DefaultGasOverheads: GasOverheads = {
  * @param overheads gas overheads to use, to override the default values
  */
 export function calcPreVerificationGas(
-  userOp: Partial<UserOperation>,
+  userOp: Partial<NotPromise<UserOperationStruct>>,
   overheads?: Partial<GasOverheads>,
 ): number {
   const ov = { ...DefaultGasOverheads, ...(overheads ?? {}) };
-  const p: UserOperation = {
+  const p: NotPromise<UserOperationStruct> = {
     // dummy values, in case the UserOp is incomplete.
     preVerificationGas: 21000, // dummy value, just for calldata cost
     signature: hexlify(Buffer.alloc(ov.sigSize, 1)), // dummy signature
     ...userOp,
   } as any;
 
-  const packed = arrayify(encodeUserOp(packUserOp(p), false));
+  const packed = arrayify(packUserOp(p, false));
   const lengthInWord = (packed.length + 31) / 32;
   const callDataCost = packed
     .map((x) => (x === 0 ? ov.zeroByte : ov.nonZeroByte))

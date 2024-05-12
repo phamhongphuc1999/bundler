@@ -1,11 +1,11 @@
+import { type EntryPoint } from '@account-abstraction/contracts';
+import {
+  type AccountDeployedEvent,
+  type UserOperationEventEvent,
+} from '@account-abstraction/contracts/dist/types/EntryPoint';
+import { type TypedEvent } from '@account-abstraction/contracts/dist/types/common';
+import { type SignatureAggregatorChangedEvent } from '@account-abstraction/contracts/types/EntryPoint';
 import Debug from 'debug';
-import type { IEntryPoint } from '../typechain';
-import type { TypedEvent } from '../typechain/common';
-import type {
-  AccountDeployedEvent,
-  SignatureAggregatorChangedEvent,
-  UserOperationEventEvent,
-} from '../typechain/contracts/SimpleEntryPoint';
 import { MempoolManager } from './MempoolManager';
 import { ReputationManager } from './ReputationManager';
 
@@ -18,7 +18,7 @@ export class EventsManager {
   lastBlock?: number;
 
   constructor(
-    readonly entryPoint: IEntryPoint,
+    readonly entryPoint: EntryPoint,
     readonly mempoolManager: MempoolManager,
     readonly reputationManager: ReputationManager,
   ) {}

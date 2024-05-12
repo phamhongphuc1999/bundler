@@ -1,17 +1,18 @@
+import { EntryPoint__factory, type EntryPoint } from '@account-abstraction/contracts';
 import { JsonRpcProvider } from '@ethersproject/providers';
 import { Command } from 'commander';
-import { ethers, Signer, Wallet } from 'ethers';
+import { Signer, Wallet, ethers } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import fs from 'fs';
 import { bundlerConfigDefault } from './BundlerConfig';
 import { BundlerServer } from './BundlerServer';
 import { resolveConfiguration } from './Config';
 import { DebugMethodHandler } from './DebugMethodHandler';
-import { initServer } from './modules/initServer';
-import { supportsDebugTraceCall } from './modules/ValidationManager';
-import { IEntryPoint__factory, type IEntryPoint } from './typechain';
 import { UserOpMethodHandler } from './UserOpMethodHandler';
-import { erc4337RuntimeVersion, RpcError, supportsRpcMethod } from './utils/Utils';
+import { initServer } from './modules/initServer';
+import { DeterministicDeployer } from './sdk';
+import { RpcError, erc4337RuntimeVersion, supportsRpcMethod } from './utils';
+import { supportsDebugTraceCall } from './validation-manager';
 
 // this is done so that console.log outputs BigNumber as hex string instead of unreadable object
 export const inspectCustomSymbol = Symbol.for('nodejs.util.inspect.custom');
@@ -20,15 +21,18 @@ ethers.BigNumber.prototype[inspectCustomSymbol] = function () {
   return `BigNumber ${parseInt(this._hex)}`;
 };
 
-const CONFIG_FILE_NAME = './localconfig/bunlder.config.json';
+const CONFIG_FILE_NAME = 'localconfig/bunlder.config.json';
 
 export let showStackTraces = false;
 
 export async function connectContracts(
   wallet: Signer,
   entryPointAddress: string,
-): Promise<{ entryPoint: IEntryPoint }> {
-  return { entryPoint: IEntryPoint__factory.connect(entryPointAddress, wallet) };
+): Promise<{ entryPoint: EntryPoint }> {
+  const entryPoint = EntryPoint__factory.connect(entryPointAddress, wallet);
+  return {
+    entryPoint,
+  };
 }
 
 /**
@@ -78,6 +82,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
 
   const programOpts = program.parse(argv).opts();
   showStackTraces = programOpts.showStackTraces;
+
   console.log('command-line arguments: ', program.opts());
 
   if (programOpts.createMnemonic != null) {
@@ -92,16 +97,22 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     process.exit(1);
   }
   const { config, provider, wallet } = await resolveConfiguration(programOpts);
-  const { chainId } = await provider.getNetwork();
+
+  const {
+    // name: chainName,
+    chainId,
+  } = await provider.getNetwork();
+
   if (chainId === 31337 || chainId === 1337) {
     if (config.debugRpc == null) {
       console.log('== debugrpc was', config.debugRpc);
       config.debugRpc = true;
-    } else console.log('== debugrpc already st', config.debugRpc);
-
-    // const ep = await deployEntryPoint(provider as any);
-    // const addr = ep.address;
-    console.log('deployed EntryPoint at', 'addr');
+    } else {
+      console.log('== debugrpc already st', config.debugRpc);
+    }
+    await new DeterministicDeployer(provider as any).deterministicDeploy(
+      EntryPoint__factory.bytecode,
+    );
     if ((await wallet.getBalance()).eq(0)) {
       console.log('=== testnet: fund signer');
       const signer = (provider as JsonRpcProvider).getSigner();
@@ -118,8 +129,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     );
     process.exit(1);
   }
-  const isDebug = await supportsDebugTraceCall(provider as JsonRpcProvider);
-  if (!config.unsafe && !isDebug) {
+  if (!config.unsafe && !(await supportsDebugTraceCall(provider as any))) {
     console.error(
       'FATAL: full validation requires a node with debug_traceCall. for local UNSAFE mode: use --unsafe',
     );
@@ -162,11 +172,15 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     console.log('Bundle interval (seconds)', execManagerConfig.autoBundleInterval);
     console.log(
       'connected to network',
-      await provider.getNetwork().then((net: { name: any; chainId: any }) => {
-        return { name: net.name, chainId: net.chainId };
+      await provider.getNetwork().then((net) => {
+        return {
+          name: net.name,
+          chainId: net.chainId,
+        };
       }),
     );
     console.log(`running on http://localhost:${config.port}/rpc`);
   });
+
   return bundlerServer;
 }

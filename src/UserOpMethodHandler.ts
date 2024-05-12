@@ -1,30 +1,22 @@
-import { JsonRpcProvider, Provider, type Log } from '@ethersproject/providers';
+import { type EntryPoint, type UserOperationStruct } from '@account-abstraction/contracts';
+import { type UserOperationEventEvent } from '@account-abstraction/contracts/dist/types/EntryPoint';
+import { Provider, type Log } from '@ethersproject/providers';
 import { BigNumber, Signer, type BigNumberish } from 'ethers';
+import { resolveProperties } from 'ethers/lib/utils';
 import { type BundlerConfig } from './BundlerConfig';
 import { type UserOperationByHashResponse, type UserOperationReceipt } from './RpcTypes';
 import { ExecutionManager } from './modules/ExecutionManager';
-import { calcPreVerificationGas } from './sdk/calcPreVerificationGas';
-import type { IEntryPoint } from './typechain';
-import type { UserOperationEventEvent } from './typechain/contracts/SimpleEntryPoint';
-import {
-  AddressZero,
-  deepHexlify,
-  mergeValidationDataValues,
-  packUserOp,
-  unpackUserOp,
-  type UserOperation,
-} from './utils/ERC4337Utils';
+import { calcPreVerificationGas } from './sdk';
 import {
   RpcError,
   ValidationErrors,
+  deepHexlify,
   erc4337RuntimeVersion,
-  requireAddressAndFields,
+  getAddr,
   requireCond,
   tostr,
-  type PackedUserOperation,
-} from './utils/Utils';
-import { decodeRevertReason } from './utils/decodeRevertReason';
-import { decodeSimulateHandleOpResult, simulationRpcParams } from './utils/rpcSimulateValidations';
+  type UserOperation,
+} from './utils';
 
 const HEX_REGEX = /^0x[a-fA-F\d]*$/i;
 
@@ -62,7 +54,7 @@ export class UserOpMethodHandler {
     readonly provider: Provider,
     readonly signer: Signer,
     readonly config: BundlerConfig,
-    readonly entryPoint: IEntryPoint,
+    readonly entryPoint: EntryPoint,
   ) {}
 
   async getSupportedEntryPoints(): Promise<string[]> {
@@ -86,7 +78,7 @@ export class UserOpMethodHandler {
   }
 
   async _validateParameters(
-    userOp1: UserOperation,
+    userOp1: UserOperationStruct,
     entryPointInput: string,
     requireSignature = true,
     requireGasParams = true,
@@ -100,9 +92,9 @@ export class UserOpMethodHandler {
     }
     // minimal sanity check: userOp exists, and all members are hex
     requireCond(userOp1 != null, 'No UserOperation param');
-    const userOp = userOp1 as any;
+    const userOp = (await resolveProperties(userOp1)) as any;
 
-    const fields = ['sender', 'nonce', 'callData'];
+    const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData'];
     if (requireSignature) {
       fields.push('signature');
     }
@@ -116,7 +108,11 @@ export class UserOpMethodHandler {
       );
     }
     fields.forEach((key) => {
-      requireCond(userOp[key] != null, 'Missing userOp field: ' + key, -32602);
+      requireCond(
+        userOp[key] != null,
+        'Missing userOp field: ' + key + JSON.stringify(userOp),
+        -32602,
+      );
       const value: string = userOp[key].toString();
       requireCond(
         value.match(HEX_REGEX) != null,
@@ -124,13 +120,6 @@ export class UserOpMethodHandler {
         -32602,
       );
     });
-    requireAddressAndFields(
-      userOp,
-      'paymaster',
-      ['paymasterPostOpGasLimit', 'paymasterVerificationGasLimit'],
-      ['paymasterData'],
-    );
-    requireAddressAndFields(userOp, 'factory', ['factoryData']);
   }
 
   /**
@@ -139,46 +128,34 @@ export class UserOpMethodHandler {
    * @param entryPointInput
    */
   async estimateUserOperationGas(
-    userOp1: Partial<UserOperation>,
+    userOp1: UserOperationStruct,
     entryPointInput: string,
   ): Promise<EstimateUserOpGasResult> {
-    const userOp: UserOperation = {
+    const userOp = {
       // default values for missing fields.
+      paymasterAndData: '0x',
       maxFeePerGas: 0,
       maxPriorityFeePerGas: 0,
       preVerificationGas: 0,
       verificationGasLimit: 10e6,
-      ...userOp1,
-    } as any;
+      ...((await resolveProperties(userOp1)) as any),
+    };
+
     // todo: checks the existence of parameters, but since we hexlify the inputs, it fails to validate
     await this._validateParameters(deepHexlify(userOp), entryPointInput);
     // todo: validation manager duplicate?
-    const provider = this.provider as JsonRpcProvider;
-    const rpcParams = simulationRpcParams(
-      'simulateHandleOp',
-      this.entryPoint.address,
-      userOp,
-      [AddressZero, '0x'],
-      {
-        // allow estimation when account's balance is zero.
-        // todo: need a way to flag this, and not enable always.
-        // [userOp.sender]: {
-        //   balance: hexStripZeros(parseEther('1').toHexString())
-        // }
-      },
-    );
-    const ret = await provider.send('eth_call', rpcParams).catch((e: any) => {
-      throw new RpcError(decodeRevertReason(e) as string, ValidationErrors.SimulateValidation);
-    });
+    const errorResult = await this.entryPoint.callStatic.simulateValidation(userOp).catch((e) => e);
+    if (errorResult.errorName === 'FailedOp') {
+      throw new RpcError(errorResult.errorArgs.at(-1), ValidationErrors.SimulateValidation);
+    }
+    // todo throw valid rpc error
+    if (errorResult.errorName !== 'ValidationResult') {
+      throw errorResult;
+    }
 
-    const returnInfo = decodeSimulateHandleOpResult(ret);
-    const { validAfter, validUntil } = mergeValidationDataValues(
-      returnInfo.accountValidationData,
-      returnInfo.paymasterValidationData,
-    );
-    const { preOpGas } = returnInfo;
+    const { returnInfo } = errorResult.errorArgs;
+    let { preOpGas, validAfter, validUntil } = returnInfo;
 
-    // todo: use simulateHandleOp for this too...
     const callGasLimit = await this.provider
       .estimateGas({
         from: this.entryPoint.address,
@@ -190,7 +167,14 @@ export class UserOpMethodHandler {
         const message = err.message.match(/reason="(.*?)"/)?.at(1) ?? 'execution reverted';
         throw new RpcError(message, ValidationErrors.UserOperationReverted);
       });
-
+    validAfter = BigNumber.from(validAfter);
+    validUntil = BigNumber.from(validUntil);
+    if ((validUntil as BigNumber).eq(0)) {
+      validUntil = undefined;
+    }
+    if ((validAfter as BigNumber).eq(0)) {
+      validAfter = undefined;
+    }
     const preVerificationGas = calcPreVerificationGas(userOp);
     const verificationGasLimit = BigNumber.from(preOpGas).toNumber();
     return {
@@ -202,13 +186,22 @@ export class UserOpMethodHandler {
     };
   }
 
-  async sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<string> {
-    await this._validateParameters(userOp, entryPointInput);
+  async sendUserOperation(userOp1: UserOperationStruct, entryPointInput: string): Promise<string> {
+    await this._validateParameters(userOp1, entryPointInput);
+
+    const userOp = await resolveProperties(userOp1);
+
+    console.log(
+      `UserOperation: Sender=${userOp.sender}  Nonce=${tostr(userOp.nonce)} EntryPoint=${entryPointInput} Paymaster=${getAddr(
+        userOp.paymasterAndData,
+      )}`,
+    );
     await this.execManager.sendUserOperation(userOp, entryPointInput);
-    return await this.entryPoint.getUserOpHash(packUserOp(userOp));
+    return await this.entryPoint.getUserOpHash(userOp);
   }
 
   async _getUserOperationEvent(userOpHash: string): Promise<UserOperationEventEvent> {
+    // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
     const event = await this.entryPoint.queryFilter(
       this.entryPoint.filters.UserOperationEvent(userOpHash),
     );
@@ -224,7 +217,7 @@ export class UserOpMethodHandler {
     const events = Object.values(this.entryPoint.interface.events);
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const beforeExecutionTopic = this.entryPoint.interface.getEventTopic(
-      events.find((e: any) => e.name === 'BeforeExecution')!,
+      events.find((e) => e.name === 'BeforeExecution')!,
     );
     logs.forEach((log, index) => {
       if (log?.topics[0] === beforeExecutionTopic) {
@@ -264,7 +257,7 @@ export class UserOpMethodHandler {
       throw new Error('unable to parse transaction');
     }
     const parsed = this.entryPoint.interface.parseTransaction(tx);
-    const ops: PackedUserOperation[] = parsed?.args.ops;
+    const ops: UserOperation[] = parsed?.args.ops;
     if (ops == null) {
       throw new Error('failed to parse transaction');
     }
@@ -275,8 +268,34 @@ export class UserOpMethodHandler {
       throw new Error('unable to find userOp in transaction');
     }
 
+    const {
+      sender,
+      nonce,
+      initCode,
+      callData,
+      callGasLimit,
+      verificationGasLimit,
+      preVerificationGas,
+      maxFeePerGas,
+      maxPriorityFeePerGas,
+      paymasterAndData,
+      signature,
+    } = op;
+
     return deepHexlify({
-      userOperation: unpackUserOp(op),
+      userOperation: {
+        sender,
+        nonce,
+        initCode,
+        callData,
+        callGasLimit,
+        verificationGasLimit,
+        preVerificationGas,
+        maxFeePerGas,
+        maxPriorityFeePerGas,
+        paymasterAndData,
+        signature,
+      },
       entryPoint: this.entryPoint.address,
       transactionHash: tx.hash,
       blockHash: tx.blockHash ?? '',

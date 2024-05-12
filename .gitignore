@@ -176,3 +176,4 @@ dist
 
 typechain/
 localconfig/private-key.txt
+bundle.js

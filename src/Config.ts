@@ -45,6 +45,7 @@ export async function resolveConfiguration(
   console.log('Merged configuration:', JSON.stringify(config));
 
   // if (config.network === 'hardhat') {
+  //   // eslint-disable-next-line
   //   const provider: JsonRpcProvider = require('hardhat').ethers.provider;
   //   return { config, provider, wallet: provider.getSigner() };
   // }

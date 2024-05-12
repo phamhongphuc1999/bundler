@@ -3,7 +3,7 @@ import { EventsManager } from './modules/EventsManager';
 import { ExecutionManager } from './modules/ExecutionManager';
 import { MempoolManager } from './modules/MempoolManager';
 import { ReputationManager, type ReputationDump } from './modules/ReputationManager';
-import type { StakeInfo } from './utils/Utils';
+import { type StakeInfo } from './utils';
 
 export class DebugMethodHandler {
   constructor(
@@ -69,7 +69,10 @@ export class DebugMethodHandler {
   async getStakeStatus(
     address: string,
     entryPoint: string,
-  ): Promise<{ stakeInfo: StakeInfo; isStaked: boolean }> {
+  ): Promise<{
+    stakeInfo: StakeInfo;
+    isStaked: boolean;
+  }> {
     return await this.repManager.getStakeStatus(address, entryPoint);
   }
 }

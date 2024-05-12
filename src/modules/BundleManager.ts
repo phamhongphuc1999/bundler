@@ -1,16 +1,21 @@
+import { type EntryPoint } from '@account-abstraction/contracts';
 import { ErrorDescription } from '@ethersproject/abi/lib/interface';
 import { JsonRpcProvider, JsonRpcSigner } from '@ethersproject/providers';
 import { Mutex } from 'async-mutex';
 import Debug from 'debug';
 import { BigNumber, type BigNumberish } from 'ethers';
-import type { IEntryPoint } from '../typechain';
-import { GetUserOpHashes__factory } from '../typechain/factories/contracts/GetUserOpHashes__factory';
-import { packUserOp, type UserOperation } from '../utils/ERC4337Utils';
-import { mergeStorageMap, runContractScript, type StorageMap } from '../utils/Utils';
+import { GetUserOpHashes__factory } from '../typechain/factories/contracts/bundler/GetUserOpHashes__factory';
+import {
+  getAddr,
+  mergeStorageMap,
+  runContractScript,
+  type StorageMap,
+  type UserOperation,
+} from '../utils';
+import { ValidationManager, type ValidateUserOpResult } from '../validation-manager';
 import { EventsManager } from './EventsManager';
 import { MempoolManager } from './MempoolManager';
 import { ReputationManager, ReputationStatus } from './ReputationManager';
-import type { ValidateUserOpResult, ValidationManager } from './ValidationManager';
 
 const debug = Debug('aa.exec.cron');
 
@@ -27,7 +32,7 @@ export class BundleManager {
   mutex = new Mutex();
 
   constructor(
-    readonly entryPoint: IEntryPoint,
+    readonly entryPoint: EntryPoint,
     readonly eventsManager: EventsManager,
     readonly mempoolManager: MempoolManager,
     readonly validationManager: ValidationManager,
@@ -84,21 +89,17 @@ export class BundleManager {
   ): Promise<SendBundleReturn | undefined> {
     try {
       const feeData = await this.provider.getFeeData();
-      const tx = await this.entryPoint.populateTransaction.handleOps(
-        userOps.map(packUserOp),
-        beneficiary,
-        {
-          type: 2,
-          nonce: await this.signer.getTransactionCount(),
-          gasLimit: 10e6,
-          maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? 0,
-          maxFeePerGas: feeData.maxFeePerGas ?? 0,
-        },
-      );
+      const tx = await this.entryPoint.populateTransaction.handleOps(userOps, beneficiary, {
+        type: 2,
+        nonce: await this.signer.getTransactionCount(),
+        gasLimit: 10e6,
+        maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ?? 0,
+        maxFeePerGas: feeData.maxFeePerGas ?? 0,
+      });
       tx.chainId = this.provider._network.chainId;
+      const signedTx = await this.signer.signTransaction(tx);
       let ret: string;
       if (this.conditionalRpc) {
-        const signedTx = await this.signer.signTransaction(tx);
         debug('eth_sendRawTransactionConditional', storageMap);
         ret = await this.provider.send('eth_sendRawTransactionConditional', [
           signedTx,
@@ -106,11 +107,9 @@ export class BundleManager {
         ]);
         debug('eth_sendRawTransactionConditional ret=', ret);
       } else {
-        const resp = await this.signer.sendTransaction(tx);
-        const rcpt = await resp.wait();
-        ret = rcpt.transactionHash;
-        // ret = await this.provider.send('eth_sendRawTransaction', [signedTx])
-        debug('eth_sendTransaction ret=', ret);
+        // ret = await this.signer.sendTransaction(tx)
+        ret = await this.provider.send('eth_sendRawTransaction', [signedTx]);
+        debug('eth_sendRawTransaction ret=', ret);
       }
       // TODO: parse ret, and revert if needed.
       debug('ret=', ret);
@@ -134,11 +133,11 @@ export class BundleManager {
       const userOp = userOps[opIndex];
       const reasonStr: string = reason.toString();
       if (reasonStr.startsWith('AA3')) {
-        this.reputationManager.crashedHandleOps(userOp.paymaster);
+        this.reputationManager.crashedHandleOps(getAddr(userOp.paymasterAndData));
       } else if (reasonStr.startsWith('AA2')) {
         this.reputationManager.crashedHandleOps(userOp.sender);
       } else if (reasonStr.startsWith('AA1')) {
-        this.reputationManager.crashedHandleOps(userOp.factory);
+        this.reputationManager.crashedHandleOps(getAddr(userOp.initCode));
       } else {
         this.mempoolManager.removeUserOp(userOp);
         console.warn(`Failed handleOps sender=${userOp.sender} reason=${reasonStr}`);
@@ -146,11 +145,8 @@ export class BundleManager {
     }
   }
 
-  // fatal errors we know we can't recover
   checkFatal(e: any): void {
-    if (e.error?.code === -32601) {
-      throw e;
-    }
+    if (e.error?.code === -32601) throw e;
   }
 
   async createBundle(): Promise<[UserOperation[], StorageMap]> {
@@ -172,8 +168,8 @@ export class BundleManager {
     debug('got mempool of ', entries.length);
     // eslint-disable-next-line no-labels
     mainLoop: for (const entry of entries) {
-      const paymaster = entry.userOp.paymaster;
-      const factory = entry.userOp.factory;
+      const paymaster = getAddr(entry.userOp.paymasterAndData);
+      const factory = getAddr(entry.userOp.initCode);
       const paymasterStatus = this.reputationManager.getStatus(paymaster);
       const deployerStatus = this.reputationManager.getStatus(factory);
       if (
@@ -212,6 +208,7 @@ export class BundleManager {
         validationResult = await this.validationManager.validateUserOp(
           entry.userOp,
           entry.referencedContracts,
+          false,
         );
       } catch (e: any) {
         debug('failed 2nd validation:', e.message);
@@ -263,7 +260,7 @@ export class BundleManager {
       }
 
       // If sender's account already exist: replace with its storage root hash
-      if (this.mergeToAccountRootHash && this.conditionalRpc && entry.userOp.factory == null) {
+      if (this.mergeToAccountRootHash && this.conditionalRpc && entry.userOp.initCode.length <= 2) {
         const { storageHash } = await this.provider.send('eth_getProof', [
           entry.userOp.sender,
           [],
@@ -305,7 +302,7 @@ export class BundleManager {
     const { userOpHashes } = await runContractScript(
       this.entryPoint.provider,
       new GetUserOpHashes__factory(),
-      [this.entryPoint.address, userOps.map(packUserOp)],
+      [this.entryPoint.address, userOps],
     );
 
     return userOpHashes;

@@ -1,6 +1,6 @@
-import { type BigNumberish } from 'ethers';
 import { type TransactionReceipt } from '@ethersproject/providers';
-import type { UserOperation } from './utils/ERC4337Utils';
+import { type BigNumberish } from 'ethers';
+import { type UserOperation } from './utils';
 
 /**
  * RPC calls return types

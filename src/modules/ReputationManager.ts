@@ -1,8 +1,8 @@
-import type { Provider } from '@ethersproject/providers';
+import { Provider } from '@ethersproject/providers';
 import Debug from 'debug';
 import { BigNumber } from 'ethers';
 import { IStakeManager__factory } from '../typechain';
-import { ValidationErrors, requireCond, tostr, type StakeInfo } from '../utils/Utils';
+import { ValidationErrors, requireCond, tostr, type StakeInfo } from '../utils';
 
 const debug = Debug('aa.rep');
 

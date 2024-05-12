@@ -1,8 +1,8 @@
 {
   "gasFactor": "1",
   "port": "3000",
-  "network": "https://data-seed-prebsc-1-s1.binance.org:8545",
-  "entryPoint": "0x3c123A703F1773C3cf5BdD6D000fd3Db466Cb4B9",
+  "network": "https://api.tatum.io/v3/blockchain/node/bsc-testnet",
+  "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
   "beneficiary": "0xac7367fe5423f5134039b446D4B9dD9C06f57826",
   "minBalance": "0.1",
   "mnemonic": "./localconfig/private-key.txt",

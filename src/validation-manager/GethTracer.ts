@@ -36,7 +36,7 @@ export async function debug_traceCall(
     );
     throw e;
   });
-  console.log('🚀 ~ ret:', ret);
+  // return applyTracer(ret, options)
   return ret;
 }
 
@@ -77,7 +77,11 @@ export function getTracerBodyString(func: LogTracerFunc): string {
     throw new Error('Not a simple method returning value');
   }
   let ret = match[1];
-  ret = ret.replace(/\b(?:const|let)\b/g, '');
+  ret = ret
+    // .replace(/\/\/.*\n/g,'\n')
+    // .replace(/\n\s*\n/g, '\n')
+    .replace(/\b(?:const|let)\b/g, '');
+  // console.log('== tracer source',ret.split('\n').map((line,index)=>`${index}: ${line}`).join('\n'))
   return ret;
 }
 
@@ -100,7 +104,6 @@ export interface TraceOptions {
   enableReturnData?: boolean; // Setting this to true will enable return data capture (default = false).
   tracer?: LogTracerFunc | string; // Setting this will enable JavaScript-based transaction tracing, described below. If set, the previous four arguments will be ignored.
   timeout?: string; // Overrides the default timeout of 5 seconds for JavaScript-based tracing calls. Valid time units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
-  stateOverrides?: any;
 }
 
 // the result type of debug_traceCall and debug_traceTransaction

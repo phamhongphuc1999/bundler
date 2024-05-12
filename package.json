@@ -1,12 +1,14 @@
 {
   "name": "bundler",
+  "version": "0.0.1",
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "compile": "bun build ./index.ts --outfile=bundle.js",
+    "compile": "bun build ./index.ts --outfile=bundle.js --target=node",
     "dev": "bun run index.ts"
   },
   "dependencies": {
+    "@account-abstraction/contracts": "0.6.0",
     "@ethersproject/properties": "^5.7.0",
     "@ethersproject/providers": "^5.7.0",
     "async-mutex": "^0.5.0",
