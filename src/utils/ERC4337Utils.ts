@@ -12,7 +12,6 @@ import {
 
 const debug = Debug('aa.utils');
 
-// UserOperation is the first parameter of validateUseOp
 const validateUserOpMethod = 'simulateValidation';
 const UserOpType = entryPointAbi.find((entry) => entry.name === validateUserOpMethod)?.inputs[0];
 if (UserOpType == null) {
@@ -26,7 +25,6 @@ if (UserOpType == null) {
 
 export const AddressZero = ethers.constants.AddressZero;
 
-// reverse "Deferrable" or "PromiseOrValue" fields
 export type NotPromise<T> = {
   [P in keyof T]: Exclude<T[P], Promise<any>>;
 };
@@ -142,10 +140,7 @@ export function decodeErrorReason(error: string): DecodedError | undefined {
       '0x' + error.substring(10),
     );
     message = `FailedOp: ${message as string}`;
-    return {
-      message,
-      opIndex,
-    };
+    return { message, opIndex };
   }
 }
 
@@ -158,9 +153,7 @@ export function decodeErrorReason(error: string): DecodedError | undefined {
 export function rethrowError(e: any): any {
   let error = e;
   let parent = e;
-  if (error?.error != null) {
-    error = error.error;
-  }
+  if (error?.error != null) error = error.error;
   while (error?.data != null) {
     parent = error;
     error = error.data;
@@ -169,14 +162,11 @@ export function rethrowError(e: any): any {
     typeof error === 'string' && error.length > 2 ? decodeErrorReason(error) : undefined;
   if (decoded != null) {
     e.message = decoded.message;
-
     if (decoded.opIndex != null) {
-      // helper for chai: convert our FailedOp error into "Error(msg)"
       const errorWithMsg = hexConcat([
         ErrorSig,
         defaultAbiCoder.encode(['string'], [decoded.message]),
       ]);
-      // modify in-place the error object:
       parent.data = errorWithMsg;
     }
   }
@@ -188,17 +178,13 @@ export function rethrowError(e: any): any {
  * @param obj
  */
 export function deepHexlify(obj: any): any {
-  if (typeof obj === 'function') {
-    return undefined;
-  }
+  if (typeof obj === 'function') return undefined;
   if (obj == null || typeof obj === 'string' || typeof obj === 'boolean') {
     return obj;
   } else if (obj._isBigNumber != null || typeof obj !== 'object') {
     return hexlify(obj).replace(/^0x0/, '0x');
   }
-  if (Array.isArray(obj)) {
-    return obj.map((member) => deepHexlify(member));
-  }
+  if (Array.isArray(obj)) return obj.map((member) => deepHexlify(member));
   return Object.keys(obj).reduce(
     (set, key) => ({
       ...set,
@@ -208,8 +194,6 @@ export function deepHexlify(obj: any): any {
   );
 }
 
-// resolve all property and hexlify.
-// (UserOpMethodHandler receives data from the network, so we need to pack our generated values)
 export async function resolveHexlify(a: any): Promise<any> {
   return deepHexlify(await resolveProperties(a));
 }

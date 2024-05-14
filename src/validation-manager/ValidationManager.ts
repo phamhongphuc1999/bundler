@@ -361,7 +361,6 @@ export class ValidationManager {
       ValidationErrors.InvalidFields,
     );
 
-    // syntactically, initCode can be only the deployer address. but in reality, it must have calldata to uniquely identify the account
     requireCond(
       userOp.initCode.length === 2 || userOp.initCode.length >= 42,
       'initCode: must contain at least an address',
@@ -370,7 +369,7 @@ export class ValidationManager {
 
     const calcPreVerificationGas1 = calcPreVerificationGas(userOp);
     requireCond(
-      parseFloat(userOp.preVerificationGas.toString()) >= calcPreVerificationGas1,
+      BigNumber.from(userOp.preVerificationGas).toNumber() >= calcPreVerificationGas1,
       `preVerificationGas too low: expected at least ${calcPreVerificationGas1}`,
       ValidationErrors.InvalidFields,
     );

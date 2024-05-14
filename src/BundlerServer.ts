@@ -30,14 +30,11 @@ export class BundlerServer {
 
     this.app.get('/', this.intro.bind(this));
     this.app.post('/', this.intro.bind(this));
-
-    // eslint-disable-next-line @typescript-eslint/no-misused-promises
     this.app.post('/rpc', this.rpc.bind(this));
 
     this.httpServer = this.app.listen(this.config.port);
     this.startingPromise = this._preflightCheck();
   }
-
   startingPromise: Promise<void>;
 
   async asyncStart(): Promise<void> {
@@ -53,7 +50,6 @@ export class BundlerServer {
       this.fatal(`entrypoint not deployed at ${this.config.entryPoint}`);
     }
 
-    // minimal UserOp to revert with "FailedOp"
     const emptyUserOp: UserOperationStruct = {
       sender: AddressZero,
       callData: '0x',
@@ -76,10 +72,8 @@ export class BundlerServer {
     }
     const signerAddress = await this.wallet.getAddress();
     const bal = await this.provider.getBalance(signerAddress);
-    console.log('signer', signerAddress, 'balance', utils.formatEther(bal));
-    if (bal.eq(0)) {
-      this.fatal('cannot run with zero balance');
-    } else if (bal.lt(parseEther(this.config.minBalance))) {
+    if (bal.eq(0)) this.fatal('cannot run with zero balance');
+    else if (bal.lt(parseEther(this.config.minBalance))) {
       console.log('WARNING: initial balance below --minBalance ', this.config.minBalance);
     }
   }
@@ -100,18 +94,12 @@ export class BundlerServer {
       for (const reqItem of req.body) {
         resContent.push(await this.handleRpc(reqItem));
       }
-    } else {
-      resContent = await this.handleRpc(req.body);
-    }
+    } else resContent = await this.handleRpc(req.body);
 
     try {
       res.send(resContent);
     } catch (err: any) {
-      const error = {
-        message: err.message,
-        data: err.data,
-        code: err.code,
-      };
+      const error = { message: err.message, data: err.data, code: err.code };
       console.log('failed: ', 'rpc::res.send()', 'error:', JSON.stringify(error));
     }
   }
@@ -123,24 +111,12 @@ export class BundlerServer {
       const result = deepHexlify(await this.handleMethod(method, params));
       console.log('sent', method, '-', result);
       debug('<<', { jsonrpc, id, result });
-      return {
-        jsonrpc,
-        id,
-        result,
-      };
+      return { jsonrpc, id, result };
     } catch (err: any) {
-      const error = {
-        message: err.message,
-        data: err.data,
-        code: err.code,
-      };
+      const error = { message: err.message, data: err.data, code: err.code };
       console.log('failed: ', method, 'error:', JSON.stringify(error));
       debug('<<', { jsonrpc, id, error });
-      return {
-        jsonrpc,
-        id,
-        error,
-      };
+      return { jsonrpc, id, error };
     }
   }
 
@@ -148,7 +124,6 @@ export class BundlerServer {
     let result: any;
     switch (method) {
       case 'eth_chainId':
-        // eslint-disable-next-line no-case-declarations
         const { chainId } = await this.provider.getNetwork();
         result = chainId;
         break;

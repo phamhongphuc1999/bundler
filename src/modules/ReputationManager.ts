@@ -95,11 +95,7 @@ export class ReputationManager {
     addr = addr.toLowerCase();
     let entry = this.entries[addr];
     if (entry == null) {
-      this.entries[addr] = entry = {
-        address: addr,
-        opsSeen: 0,
-        opsIncluded: 0,
-      };
+      this.entries[addr] = entry = { address: addr, opsSeen: 0, opsIncluded: 0 };
     }
     return entry;
   }
@@ -109,9 +105,7 @@ export class ReputationManager {
    * @param addr
    */
   updateSeenStatus(addr?: string): void {
-    if (addr == null) {
-      return;
-    }
+    if (addr == null) return;
     const entry = this._getOrCreate(addr);
     entry.opsSeen++;
     debug('after seen++', addr, entry);
@@ -135,24 +129,16 @@ export class ReputationManager {
   // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
   getStatus(addr?: string): ReputationStatus {
     addr = addr?.toLowerCase();
-    if (addr == null || this.whitelist.has(addr)) {
-      return ReputationStatus.OK;
-    }
-    if (this.blackList.has(addr)) {
-      return ReputationStatus.BANNED;
-    }
+    if (addr == null || this.whitelist.has(addr)) return ReputationStatus.OK;
+    if (this.blackList.has(addr)) return ReputationStatus.BANNED;
     const entry = this.entries[addr];
-    if (entry == null) {
-      return ReputationStatus.OK;
-    }
+    if (entry == null) return ReputationStatus.OK;
     const minExpectedIncluded = Math.floor(entry.opsSeen / this.params.minInclusionDenominator);
     if (minExpectedIncluded <= entry.opsIncluded + this.params.throttlingSlack) {
       return ReputationStatus.OK;
     } else if (minExpectedIncluded <= entry.opsIncluded + this.params.banSlack) {
       return ReputationStatus.THROTTLED;
-    } else {
-      return ReputationStatus.BANNED;
-    }
+    } else return ReputationStatus.BANNED;
   }
 
   async getStakeStatus(
@@ -183,12 +169,8 @@ export class ReputationManager {
    * @param addr
    */
   crashedHandleOps(addr: string | undefined): void {
-    if (addr == null) {
-      return;
-    }
-    // todo: what value to put? how long do we want this banning to hold?
+    if (addr == null) return;
     const entry = this._getOrCreate(addr);
-    // [SREP-050]
     entry.opsSeen += 10000;
     entry.opsIncluded = 0;
     debug('crashedHandleOps', addr, entry);

@@ -166,7 +166,6 @@ export class BundleManager {
     const storageMap: StorageMap = {};
     let totalGas = BigNumber.from(0);
     debug('got mempool of ', entries.length);
-    // eslint-disable-next-line no-labels
     mainLoop: for (const entry of entries) {
       const paymaster = getAddr(entry.userOp.paymasterAndData);
       const factory = getAddr(entry.userOp.initCode);
@@ -304,7 +303,6 @@ export class BundleManager {
       new GetUserOpHashes__factory(),
       [this.entryPoint.address, userOps],
     );
-
     return userOpHashes;
   }
 }

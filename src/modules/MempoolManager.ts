@@ -132,18 +132,9 @@ export class MempoolManager {
     aggregatorInfo?: StakeInfo,
   ): void {
     this.checkReputationStatus('account', senderInfo, MAX_MEMPOOL_USEROPS_PER_SENDER);
-
-    if (paymasterInfo != null) {
-      this.checkReputationStatus('paymaster', paymasterInfo);
-    }
-
-    if (factoryInfo != null) {
-      this.checkReputationStatus('deployer', factoryInfo);
-    }
-
-    if (aggregatorInfo != null) {
-      this.checkReputationStatus('aggregator', aggregatorInfo);
-    }
+    if (paymasterInfo != null) this.checkReputationStatus('paymaster', paymasterInfo);
+    if (factoryInfo != null) this.checkReputationStatus('deployer', factoryInfo);
+    if (aggregatorInfo != null) this.checkReputationStatus('aggregator', aggregatorInfo);
   }
 
   private checkMultipleRolesViolation(userOp: UserOperation): void {
@@ -224,9 +215,7 @@ export class MempoolManager {
   _findBySenderNonce(sender: string, nonce: BigNumberish): number {
     for (let i = 0; i < this.mempool.length; i++) {
       const curOp = this.mempool[i].userOp;
-      if (curOp.sender === sender && curOp.nonce === nonce) {
-        return i;
-      }
+      if (curOp.sender === sender && curOp.nonce === nonce) return i;
     }
     return -1;
   }
@@ -234,9 +223,7 @@ export class MempoolManager {
   _findByHash(hash: string): number {
     for (let i = 0; i < this.mempool.length; i++) {
       const curOp = this.mempool[i];
-      if (curOp.userOpHash === hash) {
-        return i;
-      }
+      if (curOp.userOpHash === hash) return i;
     }
     return -1;
   }

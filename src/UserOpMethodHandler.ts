@@ -188,20 +188,15 @@ export class UserOpMethodHandler {
 
   async sendUserOperation(userOp1: UserOperationStruct, entryPointInput: string): Promise<string> {
     await this._validateParameters(userOp1, entryPointInput);
-
     const userOp = await resolveProperties(userOp1);
-
     console.log(
-      `UserOperation: Sender=${userOp.sender}  Nonce=${tostr(userOp.nonce)} EntryPoint=${entryPointInput} Paymaster=${getAddr(
-        userOp.paymasterAndData,
-      )}`,
+      `UserOperation: Sender=${userOp.sender}  Nonce=${tostr(userOp.nonce)} EntryPoint=${entryPointInput}`,
     );
     await this.execManager.sendUserOperation(userOp, entryPointInput);
     return await this.entryPoint.getUserOpHash(userOp);
   }
 
   async _getUserOperationEvent(userOpHash: string): Promise<UserOperationEventEvent> {
-    // TODO: eth_getLogs is throttled. must be acceptable for finding a UserOperation by hash
     const event = await this.entryPoint.queryFilter(
       this.entryPoint.filters.UserOperationEvent(userOpHash),
     );

@@ -25,3 +25,4 @@ This project was created using `bun init` in bun v1.1.6. [Bun](https://bun.sh) i
 ### Reference
 
 - https://github.com/eth-infinitism/bundler
+- https://api.tatum.io/v3/blockchain/node/bsc-testnet

@@ -64,12 +64,10 @@ export function calcPreVerificationGas(
 ): number {
   const ov = { ...DefaultGasOverheads, ...(overheads ?? {}) };
   const p: NotPromise<UserOperationStruct> = {
-    // dummy values, in case the UserOp is incomplete.
-    preVerificationGas: 21000, // dummy value, just for calldata cost
-    signature: hexlify(Buffer.alloc(ov.sigSize, 1)), // dummy signature
+    signature: hexlify(Buffer.alloc(ov.sigSize, 1)),
     ...userOp,
+    preVerificationGas: 21000,
   } as any;
-
   const packed = arrayify(packUserOp(p, false));
   const lengthInWord = (packed.length + 31) / 32;
   const callDataCost = packed

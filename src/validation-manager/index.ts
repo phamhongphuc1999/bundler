@@ -9,11 +9,7 @@ export * from './ValidationManager';
 
 export async function supportsDebugTraceCall(provider: JsonRpcProvider): Promise<boolean> {
   const p = provider.send as any;
-  if (p._clientVersion == null) {
-    p._clientVersion = await provider.send('web3_clientVersion', []);
-  }
-
-  // make sure we can trace a call.
+  if (p._clientVersion == null) p._clientVersion = await provider.send('web3_clientVersion', []);
   const ret = await debug_traceCall(
     provider,
     { from: AddressZero, to: AddressZero, data: '0x' },
@@ -28,9 +24,7 @@ export async function checkRulesViolations(
   entryPointAddress: string,
 ): Promise<ValidateUserOpResult> {
   const supportsTrace = await supportsDebugTraceCall(provider);
-  if (!supportsTrace) {
-    throw new Error('This provider does not support stack tracing');
-  }
+  if (!supportsTrace) throw new Error('This provider does not support stack tracing');
   const entryPoint = IEntryPoint__factory.connect(entryPointAddress, provider);
   const validationManager = new ValidationManager(entryPoint, false);
   return await validationManager.validateUserOp(userOperation);

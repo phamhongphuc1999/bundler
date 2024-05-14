@@ -39,15 +39,11 @@ export enum ValidationErrors {
 }
 
 export interface ReferencedCodeHashes {
-  // addresses accessed during this user operation
   addresses: string[];
-
-  // keccak over the code of all referenced addresses
   hash: string;
 }
 
 export class RpcError extends Error {
-  // error codes from: https://eips.ethereum.org/EIPS/eip-1474
   constructor(
     msg: string,
     readonly code?: number,
@@ -67,9 +63,7 @@ export function requireCond(
   code?: number,
   data: any = undefined,
 ): void {
-  if (!cond) {
-    throw new RpcError(msg, code, data);
-  }
+  if (!cond) throw new RpcError(msg, code, data);
 }
 
 /**
@@ -87,9 +81,7 @@ export function mapOf<T>(
 } {
   const ret: { [key: string]: T } = {};
   for (const key of keys) {
-    if (filter == null || filter(key)) {
-      ret[key] = mapper(key);
-    }
+    if (filter == null || filter(key)) ret[key] = mapper(key);
   }
   return ret;
 }
@@ -106,9 +98,7 @@ export async function waitFor<T>(
   const endTime = Date.now() + timeout;
   while (true) {
     const ret = await func();
-    if (ret != null) {
-      return ret;
-    }
+    if (ret != null) return ret;
     if (Date.now() > endTime) {
       throw new Error(`Timed out waiting for ${func as unknown as string}`);
     }
@@ -123,18 +113,13 @@ export async function supportsRpcMethod(
 ): Promise<boolean> {
   const ret = await provider.send(method, params).catch((e) => e);
   const code = ret.error?.code ?? ret.code;
-  return code === -32602; // wrong params (meaning, method exists)
+  return code === -32602;
 }
 
-// extract address from initCode or paymasterAndData
 export function getAddr(data?: BytesLike): string | undefined {
-  if (data == null) {
-    return undefined;
-  }
+  if (data == null) return undefined;
   const str = hexlify(data);
-  if (str.length >= 42) {
-    return str.slice(0, 42);
-  }
+  if (str.length >= 42) return str.slice(0, 42);
   return undefined;
 }
 
@@ -153,17 +138,12 @@ export function mergeStorageMap(
 ): StorageMap {
   Object.entries(validationStorageMap).forEach(([addr, validationEntry]) => {
     if (typeof validationEntry === 'string') {
-      // it's a root. override specific slots, if any
       mergedStorageMap[addr] = validationEntry;
     } else if (typeof mergedStorageMap[addr] === 'string') {
-      // merged address already contains a root. ignore specific slot values
     } else {
       let slots: SlotMap;
-      if (mergedStorageMap[addr] == null) {
-        slots = mergedStorageMap[addr] = {};
-      } else {
-        slots = mergedStorageMap[addr] as SlotMap;
-      }
+      if (mergedStorageMap[addr] == null) slots = mergedStorageMap[addr] = {};
+      else slots = mergedStorageMap[addr] as SlotMap;
 
       Object.entries(validationEntry).forEach(([slot, val]) => {
         slots[slot] = val;

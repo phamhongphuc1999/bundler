@@ -1,4 +1,3 @@
-// TODO: consider adopting config-loading approach from hardhat to allow code in config file
 import ow from 'ow';
 
 const MIN_UNSTAKE_DELAY = 86400;

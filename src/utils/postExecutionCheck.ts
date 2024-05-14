@@ -7,7 +7,6 @@ const debug = Debug('aa.postExec');
 
 export async function postExecutionDump(entryPoint: EntryPoint, userOpHash: string): Promise<void> {
   const { gasPaid, gasUsed, success, userOp } = await postExecutionCheck(entryPoint, userOpHash);
-  /// / debug dump:
   debug(
     '==== used=',
     gasUsed,
@@ -54,10 +53,5 @@ export async function postExecutionCheck(
   const { actualGasUsed, success } = req[0].args;
   const gasPaid = actualGasUsed.toNumber();
   const gasUsed = transactionReceipt.gasUsed.toNumber();
-  return {
-    gasUsed,
-    gasPaid,
-    success,
-    userOp,
-  };
+  return { gasUsed, gasPaid, success, userOp };
 }
