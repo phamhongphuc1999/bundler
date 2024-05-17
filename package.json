@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "compile": "bun build ./index.ts --outfile=bundle.js --target=node",
-    "dev": "bun run index.ts"
+    "dev": "bun run index.ts",
+    "unsafe": "bun run index.ts --unsafe"
   },
   "dependencies": {
     "@account-abstraction/contracts": "0.6.0",

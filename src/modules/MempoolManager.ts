@@ -39,22 +39,15 @@ export class MempoolManager {
 
   incrementEntryCount(address?: string): void {
     address = address?.toLowerCase();
-    if (address == null) {
-      return;
-    }
+    if (address == null) return;
     this._entryCount[address] = (this._entryCount[address] ?? 0) + 1;
   }
 
   decrementEntryCount(address?: string): void {
     address = address?.toLowerCase();
-    if (address == null || this._entryCount[address] == null) {
-      return;
-    }
+    if (address == null || this._entryCount[address] == null) return;
     this._entryCount[address] = (this._entryCount[address] ?? 0) - 1;
-    if ((this._entryCount[address] ?? 0) <= 0) {
-      // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-      delete this._entryCount[address];
-    }
+    if ((this._entryCount[address] ?? 0) <= 0) delete this._entryCount[address];
   }
 
   constructor(readonly reputationManager: ReputationManager) {}
@@ -93,13 +86,9 @@ export class MempoolManager {
       debug('add userOp', userOp.sender, userOp.nonce);
       this.incrementEntryCount(userOp.sender);
       const paymaster = getAddr(userOp.paymasterAndData);
-      if (paymaster != null) {
-        this.incrementEntryCount(paymaster);
-      }
+      if (paymaster != null) this.incrementEntryCount(paymaster);
       const factory = getAddr(userOp.initCode);
-      if (factory != null) {
-        this.incrementEntryCount(factory);
-      }
+      if (factory != null) this.incrementEntryCount(factory);
       this.checkReputation(senderInfo, paymasterInfo, factoryInfo, aggregatorInfo);
       this.checkMultipleRolesViolation(userOp);
       this.mempool.push(entry);
@@ -234,11 +223,8 @@ export class MempoolManager {
    */
   removeUserOp(userOpOrHash: UserOperation | string): void {
     let index: number;
-    if (typeof userOpOrHash === 'string') {
-      index = this._findByHash(userOpOrHash);
-    } else {
-      index = this._findBySenderNonce(userOpOrHash.sender, userOpOrHash.nonce);
-    }
+    if (typeof userOpOrHash === 'string') index = this._findByHash(userOpOrHash);
+    else index = this._findBySenderNonce(userOpOrHash.sender, userOpOrHash.nonce);
     if (index !== -1) {
       const userOp = this.mempool[index].userOp;
       debug('removeUserOp', userOp.sender, userOp.nonce);
@@ -246,7 +232,6 @@ export class MempoolManager {
       this.decrementEntryCount(userOp.sender);
       this.decrementEntryCount(getAddr(userOp.paymasterAndData));
       this.decrementEntryCount(getAddr(userOp.initCode));
-      // TODO: store and remove aggregator entity count
     }
   }
 

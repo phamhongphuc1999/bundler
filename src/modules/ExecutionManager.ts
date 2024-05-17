@@ -99,10 +99,7 @@ export class ExecutionManager {
     );
     if (force || this.mempoolManager.count() >= this.maxMempoolSize) {
       const ret = await this.bundleManager.sendNextBundle();
-      if (this.maxMempoolSize === 0) {
-        // in "auto-bundling" mode (which implies auto-mining) also flush mempool from included UserOps
-        await this.bundleManager.handlePastEvents();
-      }
+      if (this.maxMempoolSize === 0) await this.bundleManager.handlePastEvents();
       return ret;
     }
   }

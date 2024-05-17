@@ -1,11 +1,6 @@
 // This file contains references to validation rules, in the format [xxx-###]
 // where xxx is OP/STO/COD/EP/SREP/EREP/UREP/ALT, and ### is a number
 // the validation rules are defined in erc-aa-validation.md
-import Debug from 'debug';
-import { BigNumber, type BigNumberish } from 'ethers';
-import { Interface, hexZeroPad, keccak256 } from 'ethers/lib/utils';
-import { inspect } from 'util';
-
 import {
   IAccount__factory,
   IEntryPoint__factory,
@@ -13,6 +8,10 @@ import {
   SenderCreator__factory,
   type IEntryPoint,
 } from '@account-abstraction/contracts';
+import Debug from 'debug';
+import { BigNumber, type BigNumberish } from 'ethers';
+import { Interface, hexZeroPad, keccak256 } from 'ethers/lib/utils';
+import { inspect } from 'util';
 import {
   ValidationErrors,
   mapOf,
@@ -41,11 +40,7 @@ const abi = Object.values(
   [...SenderCreator__factory.abi, ...IEntryPoint__factory.abi, ...IPaymaster__factory.abi].reduce(
     (set, entry) => {
       const key = `${entry.name}(${entry.inputs.map((i) => i.type).join(',')})`;
-      // console.log('key=', key, keccak256(Buffer.from(key)).slice(0,10))
-      return {
-        ...set,
-        [key]: entry,
-      };
+      return { ...set, [key]: entry };
     },
     {},
   ),

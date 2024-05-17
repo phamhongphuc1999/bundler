@@ -36,7 +36,6 @@ export async function debug_traceCall(
     );
     throw e;
   });
-  // return applyTracer(ret, options)
   return ret;
 }
 
@@ -69,31 +68,20 @@ export async function debug_traceTransaction(
  */
 export function getTracerBodyString(func: LogTracerFunc): string {
   const tracerFunc = func.toString();
-  // function must return a plain object:
-  //  function xyz() { return {...}; }
   const regexp = /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/; // (\{[\s\S]+\}); \} $/
   const match = tracerFunc.match(regexp);
   if (match == null) {
     throw new Error('Not a simple method returning value');
   }
   let ret = match[1];
-  ret = ret
-    // .replace(/\/\/.*\n/g,'\n')
-    // .replace(/\n\s*\n/g, '\n')
-    .replace(/\b(?:const|let)\b/g, '');
-  // console.log('== tracer source',ret.split('\n').map((line,index)=>`${index}: ${line}`).join('\n'))
+  ret = ret.replace(/\b(?:const|let)\b/g, '');
   return ret;
 }
 
 function tracer2string(options: TraceOptions): TraceOptions {
   if (typeof options.tracer === 'function') {
-    return {
-      ...options,
-      tracer: getTracerBodyString(options.tracer),
-    };
-  } else {
-    return options;
-  }
+    return { ...options, tracer: getTracerBodyString(options.tracer) };
+  } else return options;
 }
 
 // the trace options param for debug_traceCall and debug_traceTransaction

@@ -58,7 +58,6 @@ export class BundleManager {
     return await this.mutex.runExclusive(async () => {
       debug('sendNextBundle');
 
-      // first flush mempool from already-included UserOps, by actively scanning past events.
       await this.handlePastEvents();
 
       const [bundle, storageMap] = await this.createBundle();
@@ -107,8 +106,8 @@ export class BundleManager {
         ]);
         debug('eth_sendRawTransactionConditional ret=', ret);
       } else {
-        // ret = await this.signer.sendTransaction(tx)
-        ret = await this.provider.send('eth_sendRawTransaction', [signedTx]);
+        ret = (await (await this.signer.sendTransaction(tx)).wait()).transactionHash;
+        // ret = await this.provider.send('eth_sendRawTransaction', [signedTx]);
         debug('eth_sendRawTransaction ret=', ret);
       }
       // TODO: parse ret, and revert if needed.
@@ -116,10 +115,7 @@ export class BundleManager {
       debug('sent handleOps with', userOps.length, 'ops. removing from mempool');
       // hashes are needed for debug rpc only.
       const hashes = await this.getUserOpHashes(userOps);
-      return {
-        transactionHash: ret,
-        userOpHashes: hashes,
-      };
+      return { transactionHash: ret, userOpHashes: hashes };
     } catch (e: any) {
       let parsedError: ErrorDescription;
       try {
