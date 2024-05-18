@@ -11,9 +11,6 @@ import { ReputationManager } from './ReputationManager';
 
 const debug = Debug('aa.events');
 
-/**
- * listen to events. trigger ReputationManager's Included
- */
 export class EventsManager {
   lastBlock?: number;
 
@@ -23,9 +20,6 @@ export class EventsManager {
     readonly reputationManager: ReputationManager,
   ) {}
 
-  /**
-   * automatically listen to all UserOperationEvent events
-   */
   initEventListener(): void {
     this.entryPoint.on(this.entryPoint.filters.UserOperationEvent(), (...args) => {
       const ev = args.slice(-1)[0];
@@ -33,9 +27,6 @@ export class EventsManager {
     });
   }
 
-  /**
-   * process all new events since last run
-   */
   async handlePastEvents(): Promise<void> {
     if (this.lastBlock === undefined) {
       this.lastBlock = Math.max(1, (await this.entryPoint.provider.getBlockNumber()) - 1000);
@@ -75,8 +66,6 @@ export class EventsManager {
   eventAggregator: string | null = null;
   eventAggregatorTxHash: string | null = null;
 
-  // aggregator event is sent once per events bundle for all UserOperationEvents in this bundle.
-  // it is not sent at all if the transaction is handleOps
   getEventAggregator(ev: TypedEvent): string | null {
     if (ev.transactionHash !== this.eventAggregatorTxHash) {
       this.eventAggregator = null;
@@ -85,7 +74,6 @@ export class EventsManager {
     return this.eventAggregator;
   }
 
-  // AccountDeployed event is sent before each UserOperationEvent that deploys a contract.
   handleAccountDeployedEvent(ev: AccountDeployedEvent): void {
     this._includedAddress(ev.args.factory);
   }

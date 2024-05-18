@@ -10,12 +10,6 @@ import { ExecutionManager } from './ExecutionManager';
 import { MempoolManager } from './MempoolManager';
 import { BundlerReputationParams, ReputationManager } from './ReputationManager';
 
-/**
- * initialize server modules.
- * returns the ExecutionManager and EventsManager (for handling events, to update reputation)
- * @param config
- * @param signer
- */
 export function initServer(
   config: BundlerConfig,
   signer: Signer,

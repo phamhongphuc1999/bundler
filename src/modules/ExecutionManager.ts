@@ -9,10 +9,6 @@ import { ReputationManager } from './ReputationManager';
 
 const debug = Debug('aa.exec');
 
-/**
- * execute userOps manually or using background timer.
- * This is the top-level interface to send UserOperation
- */
 export class ExecutionManager {
   private reputationCron: any;
   private autoBundleInterval: any;
@@ -27,10 +23,6 @@ export class ExecutionManager {
     private readonly validationManager: ValidationManager,
   ) {}
 
-  /**
-   * send a user operation through the bundler.
-   * @param userOp the UserOp to send.
-   */
   async sendUserOperation(userOp: UserOperation, entryPointInput: string): Promise<void> {
     await this.mutex.runExclusive(async () => {
       debug('sendUserOperation');
@@ -59,14 +51,6 @@ export class ExecutionManager {
     }
   }
 
-  /**
-   * set automatic bundle creation
-   * @param autoBundleInterval autoBundleInterval to check. send bundle anyway after this time is elapsed. zero for manual mode
-   * @param maxMempoolSize maximum # of pending mempool entities. send immediately when there are that many entities in the mempool.
-   *    set to zero (or 1) to automatically send each UserOp.
-   * (note: there is a chance that the sent bundle will contain less than this number, in case only some mempool entities can be sent.
-   *  e.g. throttled paymaster)
-   */
   setAutoBundler(autoBundleInterval: number, maxMempoolSize: number): void {
     debug(
       'set auto-bundle autoBundleInterval=',
@@ -84,10 +68,6 @@ export class ExecutionManager {
     this.maxMempoolSize = maxMempoolSize;
   }
 
-  /**
-   * attempt to send a bundle now.
-   * @param force
-   */
   async attemptBundle(force = true): Promise<SendBundleReturn | undefined> {
     debug(
       'attemptBundle force=',

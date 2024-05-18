@@ -27,12 +27,8 @@ import { tracerResultParser } from './TracerResultParser';
 
 const debug = Debug('aa.mgr.validate');
 
-// how much time into the future a UserOperation must be valid in order to be accepted
 const VALID_UNTIL_FUTURE_SECONDS = 30;
 
-/**
- * result from successful simulateValidation
- */
 export interface ValidationResult {
   returnInfo: {
     preOpGas: BigNumberish;
@@ -61,7 +57,6 @@ export class ValidationManager {
     readonly unsafe: boolean,
   ) {}
 
-  // standard eth_call to simulateValidation
   async _callSimulateValidation(userOp: UserOperation): Promise<ValidationResult> {
     const errorResult = await this.entryPoint.callStatic
       .simulateValidation(userOp, { gasLimit: 10e6 })
@@ -74,13 +69,10 @@ export class ValidationManager {
     errorResult: { errorName: string; errorArgs: any },
   ): ValidationResult {
     if (!errorResult?.errorName?.startsWith('ValidationResult')) {
-      // parse it as FailedOp
-      // if its FailedOp, then we have the paymaster param... otherwise its an Error(string)
       let paymaster = errorResult.errorArgs.paymaster;
       if (paymaster === AddressZero) {
         paymaster = undefined;
       }
-      // eslint-disable-next-line
       const msg: string = errorResult.errorArgs?.reason ?? errorResult.toString();
 
       if (paymaster == null) {
@@ -104,26 +96,14 @@ export class ValidationManager {
       paymasterInfo,
       aggregatorInfo, // may be missing (exists only SimulationResultWithAggregator
     } = errorResult.errorArgs;
-
-    // extract address from "data" (first 20 bytes)
-    // add it as "addr" member to the "stakeinfo" struct
-    // if no address, then return "undefined" instead of struct.
     function fillEntity(data: BytesLike, info: StakeInfo): StakeInfo | undefined {
       const addr = getAddr(data);
-      return addr == null
-        ? undefined
-        : {
-            ...info,
-            addr,
-          };
+      return addr == null ? undefined : { ...info, addr };
     }
 
     return {
       returnInfo,
-      senderInfo: {
-        ...senderInfo,
-        addr: userOp.sender,
-      },
+      senderInfo: { ...senderInfo, addr: userOp.sender },
       factoryInfo: fillEntity(userOp.initCode, factoryInfo),
       paymasterInfo: fillEntity(userOp.paymasterAndData, paymasterInfo),
       aggregatorInfo: fillEntity(aggregatorInfo?.actualAggregator, aggregatorInfo?.stakeInfo),
@@ -158,10 +138,7 @@ export class ValidationManager {
       throw new Error('Invalid response. simulateCall must revert');
     }
     const data = (lastResult as ExitInfo).data;
-    // Hack to handle SELFDESTRUCT until we fix entrypoint
-    if (data === '0x') {
-      return [data as any, tracerResult];
-    }
+    if (data === '0x') return [data as any, tracerResult];
     try {
       const { name: errorName, args: errorArgs } = this.entryPoint.interface.parseError(data);
       const errFullName = `${errorName}(${errorArgs.toString()})`;
@@ -169,10 +146,7 @@ export class ValidationManager {
         errorName,
         errorArgs,
       });
-      if (!errorName.includes('Result')) {
-        // a real error, not a result.
-        throw new Error(errFullName);
-      }
+      if (!errorName.includes('Result')) throw new Error(errFullName);
       debug(
         '==dump tree=',
         JSON.stringify(tracerResult, null, 2)
@@ -183,26 +157,14 @@ export class ValidationManager {
           )
           .replace(new RegExp(getAddr(userOp.initCode) ?? '--no-initcode--'), '{factory}'),
       );
-      // console.log('==debug=', ...tracerResult.numberLevels.forEach(x=>x.access), 'sender=', userOp.sender, 'paymaster=', hexlify(userOp.paymasterAndData)?.slice(0, 42))
-      // errorResult is "ValidationResult"
       return [errorResult, tracerResult];
     } catch (e: any) {
-      // if already parsed, throw as is
-      if (e.code != null) {
-        throw e;
-      }
-      // not a known error of EntryPoint (probably, only Error(string), since FailedOp is handled above)
+      if (e.code != null) throw e;
       const err = decodeErrorReason(data);
       throw new RpcError(err != null ? err.message : data, 111);
     }
   }
 
-  /**
-   * validate UserOperation.
-   * should also handle unmodified memory (e.g. by referencing cached storage in the mempool
-   * one item to check that was un-modified is the aggregator..
-   * @param userOp
-   */
   async validateUserOp(
     userOp: UserOperation,
     previousCodeHashes?: ReferencedCodeHashes,
@@ -210,7 +172,6 @@ export class ValidationManager {
   ): Promise<ValidateUserOpResult> {
     if (previousCodeHashes != null && previousCodeHashes.addresses.length > 0) {
       const { hash: codeHashes } = await this.getCodeHashes(previousCodeHashes.addresses);
-      // [COD-010]
       requireCond(
         codeHashes === previousCodeHashes.hash,
         'modified code after first validation',
@@ -233,17 +194,10 @@ export class ValidationManager {
         res,
         this.entryPoint,
       );
-      // if no previous contract hashes, then calculate hashes of contracts
-      if (previousCodeHashes == null) {
-        codeHashes = await this.getCodeHashes(contractAddresses);
-      }
-      if ((res as any) === '0x') {
+      if (previousCodeHashes == null) codeHashes = await this.getCodeHashes(contractAddresses);
+      if ((res as any) === '0x')
         throw new Error('simulateValidation reverted with no revert string!');
-      }
-    } else {
-      // NOTE: this mode doesn't do any opcode checking and no stake checking!
-      res = await this._callSimulateValidation(userOp);
-    }
+    } else res = await this._callSimulateValidation(userOp);
 
     requireCond(
       !res.returnInfo.sigFailed,
@@ -285,11 +239,7 @@ export class ValidationManager {
       ValidationErrors.SimulateValidation,
     );
 
-    return {
-      ...res,
-      referencedContracts: codeHashes,
-      storageMap,
-    };
+    return { ...res, referencedContracts: codeHashes, storageMap };
   }
 
   async getCodeHashes(addresses: string[]): Promise<ReferencedCodeHashes> {
@@ -298,20 +248,9 @@ export class ValidationManager {
       new CodeHashGetter__factory(),
       [addresses],
     );
-
-    return {
-      hash,
-      addresses,
-    };
+    return { hash, addresses };
   }
 
-  /**
-   * perform static checking on input parameters.
-   * @param userOp
-   * @param entryPointInput
-   * @param requireSignature
-   * @param requireGasParams
-   */
   validateInputParameters(
     userOp: UserOperation,
     entryPointInput: string,
@@ -325,7 +264,6 @@ export class ValidationManager {
       ValidationErrors.InvalidFields,
     );
 
-    // minimal sanity check: userOp exists, and all members are hex
     requireCond(userOp != null, 'No UserOperation param', ValidationErrors.InvalidFields);
 
     const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData'];

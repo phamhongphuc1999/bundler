@@ -6,10 +6,6 @@ import { ValidationErrors, requireCond, tostr, type StakeInfo } from '../utils';
 
 const debug = Debug('aa.rep');
 
-/**
- * throttled entities are allowed minimal number of entries per bundle. banned entities are allowed none
- */
-
 export enum ReputationStatus {
   OK,
   THROTTLED,
@@ -52,15 +48,9 @@ export class ReputationManager {
   ) {}
 
   private entries: { [address: string]: ReputationEntry } = {};
-  // black-listed entities - always banned
   readonly blackList = new Set<string>();
-
-  // white-listed entities - always OK.
   readonly whitelist = new Set<string>();
 
-  /**
-   * debug: dump reputation map (with updated "status" for each entry)
-   */
   dump(): ReputationDump {
     Object.values(this.entries).forEach((entry) => {
       entry.status = this.getStatus(entry.address);
@@ -68,9 +58,6 @@ export class ReputationManager {
     return Object.values(this.entries);
   }
 
-  /**
-   * exponential backoff of opsSeen and opsIncluded values
-   */
   hourlyCron(): void {
     Object.keys(this.entries).forEach((addr) => {
       const entry = this.entries[addr];
@@ -99,10 +86,6 @@ export class ReputationManager {
     return entry;
   }
 
-  /**
-   * address seen in the mempool triggered by the
-   * @param addr
-   */
   updateSeenStatus(addr?: string): void {
     if (addr == null) return;
     const entry = this._getOrCreate(addr);
@@ -110,11 +93,6 @@ export class ReputationManager {
     debug('after seen++', addr, entry);
   }
 
-  /**
-   * found paymaster/deployer/agregator on-chain.
-   * triggered by the EventsManager.
-   * @param addr
-   */
   updateIncludedStatus(addr: string): void {
     const entry = this._getOrCreate(addr);
     entry.opsIncluded++;
@@ -125,7 +103,6 @@ export class ReputationManager {
     return this.whitelist.has(addr);
   }
 
-  // https://github.com/eth-infinitism/account-abstraction/blob/develop/eip/EIPS/eip-4337.md#reputation-scoring-and-throttlingbanning-for-paymasters
   getStatus(addr?: string): ReputationStatus {
     addr = addr?.toLowerCase();
     if (addr == null || this.whitelist.has(addr)) return ReputationStatus.OK;
@@ -162,11 +139,6 @@ export class ReputationManager {
     };
   }
 
-  /**
-   * an entity that caused handleOps to revert, which requires re-building the bundle from scratch.
-   * should be banned immediately, by increasing its opSeen counter
-   * @param addr
-   */
   crashedHandleOps(addr: string | undefined): void {
     if (addr == null) return;
     const entry = this._getOrCreate(addr);
@@ -175,17 +147,10 @@ export class ReputationManager {
     debug('crashedHandleOps', addr, entry);
   }
 
-  /**
-   * for debugging: clear in-memory state
-   */
   clearState(): void {
     this.entries = {};
   }
 
-  /**
-   * for debugging: put in the given reputation entries
-   * @param entries
-   */
   setReputation(reputations: ReputationDump): ReputationDump {
     reputations.forEach((rep) => {
       this.entries[rep.address.toLowerCase()] = {
@@ -197,10 +162,6 @@ export class ReputationManager {
     return this.dump();
   }
 
-  /**
-   * check the given address (account/paymaster/deployer/aggregator) is banned
-   * unlike {@link checkStake} does not check whitelist or stake
-   */
   checkBanned(title: 'account' | 'paymaster' | 'aggregator' | 'deployer', info: StakeInfo): void {
     requireCond(
       this.getStatus(info.addr) !== ReputationStatus.BANNED,
@@ -210,10 +171,6 @@ export class ReputationManager {
     );
   }
 
-  /**
-   * check the given address (account/paymaster/deployer/aggregator) is throttled
-   * unlike {@link checkStake} does not check whitelist or stake
-   */
   checkThrottled(
     title: 'account' | 'paymaster' | 'aggregator' | 'deployer',
     info: StakeInfo,
@@ -226,16 +183,8 @@ export class ReputationManager {
     );
   }
 
-  /**
-   * check the given address (account/paymaster/deployer/aggregator) is staked
-   * @param title the address title (field name to put into the "data" element)
-   * @param raddr the address to check the stake of. null is "ok"
-   * @param info stake info from verification. if not given, then read from entryPoint
-   */
   checkStake(title: 'account' | 'paymaster' | 'aggregator' | 'deployer', info?: StakeInfo): void {
-    if (info?.addr == null || this.isWhitelisted(info.addr)) {
-      return;
-    }
+    if (info?.addr == null || this.isWhitelisted(info.addr)) return;
     requireCond(
       this.getStatus(info.addr) !== ReputationStatus.BANNED,
       `${title} ${info.addr} is banned`,
@@ -255,23 +204,14 @@ export class ReputationManager {
     );
   }
 
-  /**
-   * @param entity - the address of a non-sender unstaked entity.
-   * @returns maxMempoolCount - the number of UserOperations this entity is allowed to have in the mempool.
-   */
   calculateMaxAllowedMempoolOpsUnstaked(entity: string): number {
     entity = entity.toLowerCase();
     const SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT = 10;
     const entry = this.entries[entity];
-    if (entry == null) {
-      return SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT;
-    }
+    if (entry == null) return SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT;
     const INCLUSION_RATE_FACTOR = 10;
     let inclusionRate = entry.opsIncluded / entry.opsSeen;
-    if (entry.opsSeen === 0) {
-      // prevent NaN of Infinity in tests
-      inclusionRate = 0;
-    }
+    if (entry.opsSeen === 0) inclusionRate = 0;
     return (
       SAME_UNSTAKED_ENTITY_MEMPOOL_COUNT +
       Math.floor(inclusionRate * INCLUSION_RATE_FACTOR) +

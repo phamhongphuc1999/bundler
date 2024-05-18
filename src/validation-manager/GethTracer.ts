@@ -3,20 +3,11 @@ import { JsonRpcProvider, type TransactionRequest } from '@ethersproject/provide
 import Debug from 'debug';
 import { BigNumber } from 'ethers';
 import { resolveProperties } from 'ethers/lib/utils';
-// from:https://geth.ethereum.org/docs/rpc/ns-debug#javascript-based-tracing
 
 const debug = Debug('aa.tracer');
 
-/**
- * a function returning a LogTracer.
- * the function's body must be "{ return {...} }"
- * the body is executed as "geth" tracer, and thus must be self-contained (no external functions or references)
- * may only reference external functions defined by geth (see go-ethereum/eth/tracers/js): toHex, toWord, isPrecompiled, slice, toString(16)
- * (it is OK if original function was in typescript: we extract its value as javascript
- */
 type LogTracerFunc = () => LogTracer;
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export async function debug_traceCall(
   provider: JsonRpcProvider,
   tx: Deferrable<TransactionRequest>,
@@ -39,7 +30,6 @@ export async function debug_traceCall(
   return ret;
 }
 
-// a hack for network that doesn't have traceCall: mine the transaction, and use debug_traceTransaction
 export async function execAndTrace(
   provider: JsonRpcProvider,
   tx: Deferrable<TransactionRequest>,
@@ -49,23 +39,15 @@ export async function execAndTrace(
   return await debug_traceTransaction(provider, hash, options);
 }
 
-// eslint-disable-next-line @typescript-eslint/naming-convention
 export async function debug_traceTransaction(
   provider: JsonRpcProvider,
   hash: string,
   options: TraceOptions,
 ): Promise<TraceResult | any> {
   const ret = await provider.send('debug_traceTransaction', [hash, tracer2string(options)]);
-  // const tx = await provider.getTransaction(hash)
-  // return applyTracer(tx, ret, options)
   return ret;
 }
 
-/**
- * extract the body of "LogTracerFunc".
- * note that we extract the javascript body, even if the function was created as typescript
- * @param func
- */
 export function getTracerBodyString(func: LogTracerFunc): string {
   const tracerFunc = func.toString();
   const regexp = /function \w+\s*\(\s*\)\s*{\s*return\s*(\{[\s\S]+\});?\s*\}\s*$/; // (\{[\s\S]+\}); \} $/

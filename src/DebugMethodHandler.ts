@@ -18,25 +18,14 @@ export class DebugMethodHandler {
   }
 
   setBundleInterval(interval: number | 'manual' | 'auto', maxPoolSize = 100): void {
-    if (interval == null) {
-      throw new Error('must specify interval <number>|manual|auto');
-    }
-    if (interval === 'auto') {
-      // size=0 ==> auto-bundle on each userop
-      this.execManager.setAutoBundler(0, 0);
-    } else if (interval === 'manual') {
-      // interval=0, but never auto-mine
-      this.execManager.setAutoBundler(0, 1000);
-    } else {
-      this.execManager.setAutoBundler(interval, maxPoolSize);
-    }
+    if (interval == null) throw new Error('must specify interval <number>|manual|auto');
+    if (interval === 'auto') this.execManager.setAutoBundler(0, 0);
+    else if (interval === 'manual') this.execManager.setAutoBundler(0, 1000);
+    else this.execManager.setAutoBundler(interval, maxPoolSize);
   }
 
   async sendBundleNow(): Promise<SendBundleReturn | undefined> {
     const ret = await this.execManager.attemptBundle(true);
-    // handlePastEvents is performed before processing the next bundle.
-    // however, in debug mode, we are interested in the side effects
-    // (on the mempool) of this "sendBundle" operation
     await this.eventsManager.handlePastEvents();
     return ret;
   }
@@ -69,10 +58,7 @@ export class DebugMethodHandler {
   async getStakeStatus(
     address: string,
     entryPoint: string,
-  ): Promise<{
-    stakeInfo: StakeInfo;
-    isStaked: boolean;
-  }> {
+  ): Promise<{ stakeInfo: StakeInfo; isStaked: boolean }> {
     return await this.repManager.getStakeStatus(address, entryPoint);
   }
 }

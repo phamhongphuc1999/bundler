@@ -157,22 +157,22 @@ export class BundlerServer {
         result = 'ok';
         break;
       case 'debug_bundler_setReputation':
-        await this.debugHandler.setReputation(params[0]);
+        this.debugHandler.setReputation(params[0]);
         result = 'ok';
         break;
       case 'debug_bundler_dumpReputation':
-        result = await this.debugHandler.dumpReputation();
+        result = this.debugHandler.dumpReputation();
         break;
       case 'debug_bundler_clearReputation':
         this.debugHandler.clearReputation();
         result = 'ok';
         break;
       case 'debug_bundler_setBundlingMode':
-        await this.debugHandler.setBundlingMode(params[0]);
+        this.debugHandler.setBundlingMode(params[0]);
         result = 'ok';
         break;
       case 'debug_bundler_setBundleInterval':
-        await this.debugHandler.setBundleInterval(params[0], params[1]);
+        this.debugHandler.setBundleInterval(params[0], params[1]);
         result = 'ok';
         break;
       case 'debug_bundler_sendBundleNow':

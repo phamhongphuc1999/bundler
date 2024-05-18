@@ -9,10 +9,6 @@ export interface SlotMap {
   [slot: string]: string;
 }
 
-/**
- * map of storage
- * for each address, either a root hash, or a map of slot:value
- */
 export interface StorageMap {
   [address: string]: string | SlotMap;
 }
@@ -66,12 +62,6 @@ export function requireCond(
   if (!cond) throw new RpcError(msg, code, data);
 }
 
-/**
- * create a dictionary object with given keys
- * @param keys the property names of the returned object
- * @param mapper mapper from key to property value
- * @param filter if exists, must return true to add keys
- */
 export function mapOf<T>(
   keys: Iterable<string>,
   mapper: (key: string) => T,
@@ -123,15 +113,6 @@ export function getAddr(data?: BytesLike): string | undefined {
   return undefined;
 }
 
-/**
- * merge all validationStorageMap objects into merged map
- * - entry with "root" (string) is always preferred over entry with slot-map
- * - merge slot entries
- * NOTE: slot values are supposed to be the value before the transaction started.
- *  so same address/slot in different validations should carry the same value
- * @param mergedStorageMap
- * @param validationStorageMap
- */
 export function mergeStorageMap(
   mergedStorageMap: StorageMap,
   validationStorageMap: StorageMap,
@@ -157,15 +138,6 @@ export function toBytes32(b: BytesLike | number): string {
   return hexZeroPad(hexlify(b).toLowerCase(), 32);
 }
 
-/**
- * run the constructor of the given type as a script: it is expected to revert with the script's return values.
- * @param provider provider to use fo rthe call
- * @param c - contract factory of the script class
- * @param ctrParams constructor parameters
- * @return an array of arguments of the error
- * example usasge:
- *     hashes = await runContractScript(provider, new GetUserOpHashes__factory(), [entryPoint.address, userOps]).then(ret => ret.userOpHashes)
- */
 export async function runContractScript<T extends ContractFactory>(
   provider: Provider,
   c: T,

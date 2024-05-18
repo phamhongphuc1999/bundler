@@ -14,7 +14,6 @@ import { DeterministicDeployer } from './sdk';
 import { RpcError, erc4337RuntimeVersion, supportsRpcMethod } from './utils';
 import { supportsDebugTraceCall } from './validation-manager';
 
-// this is done so that console.log outputs BigNumber as hex string instead of unreadable object
 export const inspectCustomSymbol = Symbol.for('nodejs.util.inspect.custom');
 // @ts-ignore
 ethers.BigNumber.prototype[inspectCustomSymbol] = function () {
@@ -35,12 +34,6 @@ export async function connectContracts(
   };
 }
 
-/**
- * start the bundler server.
- * this is an async method, but only to resolve configuration. after it returns, the server is only active after asyncInit()
- * @param argv
- * @param overrideExit
- */
 export async function runBundler(argv: string[], overrideExit = true): Promise<BundlerServer> {
   const program = new Command();
 
@@ -98,10 +91,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
   }
   const { config, provider, wallet } = await resolveConfiguration(programOpts);
 
-  const {
-    // name: chainName,
-    chainId,
-  } = await provider.getNetwork();
+  const { chainId } = await provider.getNetwork();
 
   if (chainId === 31337 || chainId === 1337) {
     if (config.debugRpc == null) {
@@ -138,11 +128,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
 
   const { entryPoint } = await connectContracts(wallet, config.entryPoint);
 
-  // bundleSize=1 replicate current immediate bundling mode
-  const execManagerConfig = {
-    ...config,
-    // autoBundleMempoolSize: 0
-  };
+  const execManagerConfig = { ...config };
   if (programOpts.auto === true) {
     execManagerConfig.autoBundleMempoolSize = 0;
     execManagerConfig.autoBundleInterval = 0;
@@ -173,10 +159,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     console.log(
       'connected to network',
       await provider.getNetwork().then((net) => {
-        return {
-          name: net.name,
-          chainId: net.chainId,
-        };
+        return { name: net.name, chainId: net.chainId };
       }),
     );
     console.log(`running on http://localhost:${config.port}/rpc`);

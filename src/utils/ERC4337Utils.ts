@@ -29,12 +29,6 @@ export type NotPromise<T> = {
   [P in keyof T]: Exclude<T[P], Promise<any>>;
 };
 
-/**
- * pack the userOperation
- * @param op
- * @param forSignature "true" if the hash is needed to calculate the getUserOpHash()
- *  "false" to pack entire UserOp, for calculating the calldata cost of putting it on-chain.
- */
 export function packUserOp(op: NotPromise<UserOperationStruct>, forSignature = true): string {
   if (forSignature) {
     return defaultAbiCoder.encode(
@@ -64,7 +58,6 @@ export function packUserOp(op: NotPromise<UserOperationStruct>, forSignature = t
       ],
     );
   } else {
-    // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
     return defaultAbiCoder.encode(
       [
         'address',
@@ -96,15 +89,6 @@ export function packUserOp(op: NotPromise<UserOperationStruct>, forSignature = t
   }
 }
 
-/**
- * calculate the userOpHash of a given userOperation.
- * The userOpHash is a hash of all UserOperation fields, except the "signature" field.
- * The entryPoint uses this value in the emitted UserOperationEvent.
- * A wallet may use this value as the hash to sign (the SampleWallet uses this method)
- * @param op
- * @param entryPoint
- * @param chainId
- */
 export function getUserOpHash(
   op: NotPromise<UserOperationStruct>,
   entryPoint: string,
@@ -126,9 +110,6 @@ interface DecodedError {
   opIndex?: number;
 }
 
-/**
- * decode bytes thrown by revert as Error(message) or FailedOp(opIndex,paymaster,message)
- */
 export function decodeErrorReason(error: string): DecodedError | undefined {
   debug('decoding', error);
   if (error.startsWith(ErrorSig)) {
@@ -144,12 +125,6 @@ export function decodeErrorReason(error: string): DecodedError | undefined {
   }
 }
 
-/**
- * update thrown Error object with our custom FailedOp message, and re-throw it.
- * updated both "message" and inner encoded "data"
- * tested on geth, hardhat-node
- * usage: entryPoint.handleOps().catch(decodeError)
- */
 export function rethrowError(e: any): any {
   let error = e;
   let parent = e;
@@ -173,10 +148,6 @@ export function rethrowError(e: any): any {
   throw e;
 }
 
-/**
- * hexlify all members of object, recursively
- * @param obj
- */
 export function deepHexlify(obj: any): any {
   if (typeof obj === 'function') return undefined;
   if (obj == null || typeof obj === 'string' || typeof obj === 'boolean') {

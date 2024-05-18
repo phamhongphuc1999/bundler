@@ -1,6 +1,3 @@
-// This file contains references to validation rules, in the format [xxx-###]
-// where xxx is OP/STO/COD/EP/SREP/EREP/UREP/ALT, and ### is a number
-// the validation rules are defined in erc-aa-validation.md
 import {
   IAccount__factory,
   IEntryPoint__factory,

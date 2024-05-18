@@ -18,7 +18,6 @@ export interface MempoolEntry {
   userOpHash: string;
   prefund: BigNumberish;
   referencedContracts: ReferencedCodeHashes;
-  // aggregator, if one was found during simulation
   aggregator?: string;
 }
 
@@ -29,8 +28,6 @@ const THROTTLED_ENTITY_MEMPOOL_COUNT = 4;
 
 export class MempoolManager {
   private mempool: MempoolEntry[] = [];
-
-  // count entities in mempool.
   private _entryCount: { [addr: string]: number | undefined } = {};
 
   entryCount(address: string): number | undefined {
@@ -56,9 +53,6 @@ export class MempoolManager {
     return this.mempool.length;
   }
 
-  // add userOp into the mempool, after initial validation.
-  // replace existing, if any (and if new gas is higher)
-  // revets if unable to add UserOp to mempool (too many UserOps with this sender)
   addUserOp(
     userOp: UserOperation,
     userOpHash: string,
@@ -112,8 +106,6 @@ export class MempoolManager {
     this.reputationManager.updateSeenStatus(getAddr(userOp.initCode));
   }
 
-  // TODO: de-duplicate code
-  // TODO 2: use configuration parameters instead of hard-coded constants
   private checkReputation(
     senderInfo: StakeInfo,
     paymasterInfo?: StakeInfo,
@@ -176,7 +168,6 @@ export class MempoolManager {
     const newMaxPriorityFeePerGas = BigNumber.from(entry.userOp.maxPriorityFeePerGas).toNumber();
     const oldMaxFeePerGas = BigNumber.from(oldEntry.userOp.maxFeePerGas).toNumber();
     const newMaxFeePerGas = BigNumber.from(entry.userOp.maxFeePerGas).toNumber();
-    // the error is "invalid fields", even though it is detected only after validation
     requireCond(
       newMaxPriorityFeePerGas >= oldMaxPriorityFeePerGas * 1.1,
       `Replacement UserOperation must have higher maxPriorityFeePerGas (old=${oldMaxPriorityFeePerGas} new=${newMaxPriorityFeePerGas}) `,
@@ -193,7 +184,6 @@ export class MempoolManager {
     const copy = Array.from(this.mempool);
 
     function cost(op: UserOperation): number {
-      // TODO: need to consult basefee and maxFeePerGas
       return BigNumber.from(op.maxPriorityFeePerGas).toNumber();
     }
 
@@ -217,10 +207,6 @@ export class MempoolManager {
     return -1;
   }
 
-  /**
-   * remove UserOp from mempool. either it is invalid, or was included in a block
-   * @param userOpOrHash
-   */
   removeUserOp(userOpOrHash: UserOperation | string): void {
     let index: number;
     if (typeof userOpOrHash === 'string') index = this._findByHash(userOpOrHash);
@@ -235,34 +221,21 @@ export class MempoolManager {
     }
   }
 
-  /**
-   * debug: dump mempool content
-   */
   dump(): MempoolDump {
     return this.mempool.map((entry) => entry.userOp);
   }
 
-  /**
-   * for debugging: clear current in-memory state
-   */
   clearState(): void {
     this.mempool = [];
     this._entryCount = {};
   }
 
-  /**
-   * Returns all addresses that are currently known to be "senders" according to the current mempool.
-   */
   getKnownSenders(): string[] {
     return this.mempool.map((it) => {
       return it.userOp.sender.toLowerCase();
     });
   }
 
-  /**
-   * Returns all addresses that are currently known to be any kind of entity according to the current mempool.
-   * Note that "sender" addresses are not returned by this function. Use {@link getKnownSenders} instead.
-   */
   getKnownEntities(): string[] {
     const res = [];
     const userOps = this.mempool;

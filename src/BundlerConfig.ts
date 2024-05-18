@@ -23,7 +23,6 @@ export interface BundlerConfig {
   autoBundleMempoolSize: number;
 }
 
-// TODO: implement merging config (args -> config.js -> default) and runtime shape validation
 export const BundlerConfigShape = {
   beneficiary: ow.string,
   entryPoint: ow.string,
@@ -45,8 +44,6 @@ export const BundlerConfigShape = {
   autoBundleMempoolSize: ow.number,
 };
 
-// TODO: consider if we want any default fields at all
-// TODO: implement merging config (args -> config.js -> default) and runtime shape validation
 export const bundlerConfigDefault: Partial<BundlerConfig> = {
   port: '3000',
   entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
