@@ -158,9 +158,7 @@ export class MempoolManager {
     if (entryCount > THROTTLED_ENTITY_MEMPOOL_COUNT) {
       this.reputationManager.checkThrottled(title, stakeInfo);
     }
-    if (entryCount > maxTxMempoolAllowedEntity) {
-      this.reputationManager.checkStake(title, stakeInfo);
-    }
+    if (entryCount > maxTxMempoolAllowedEntity) this.reputationManager.checkStake(title, stakeInfo);
   }
 
   private checkReplaceUserOp(oldEntry: MempoolEntry, entry: MempoolEntry): void {

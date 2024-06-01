@@ -202,26 +202,18 @@ export class BundleManager {
         entry.userOp.callGasLimit,
       );
       const newTotalGas = totalGas.add(userOpGasCost);
-      if (newTotalGas.gt(this.maxBundleGas)) {
-        break;
-      }
-
+      if (newTotalGas.gt(this.maxBundleGas)) break;
       if (paymaster != null) {
         if (paymasterDeposit[paymaster] == null) {
           paymasterDeposit[paymaster] = await this.entryPoint.balanceOf(paymaster);
         }
-        if (paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)) {
-          continue;
-        }
+        if (paymasterDeposit[paymaster].lt(validationResult.returnInfo.prefund)) continue;
         stakedEntityCount[paymaster] = (stakedEntityCount[paymaster] ?? 0) + 1;
         paymasterDeposit[paymaster] = paymasterDeposit[paymaster].sub(
           validationResult.returnInfo.prefund,
         );
       }
-      if (factory != null) {
-        stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1;
-      }
-
+      if (factory != null) stakedEntityCount[factory] = (stakedEntityCount[factory] ?? 0) + 1;
       if (this.mergeToAccountRootHash && this.conditionalRpc && entry.userOp.initCode.length <= 2) {
         const { storageHash } = await this.provider.send('eth_getProof', [
           entry.userOp.sender,
@@ -244,12 +236,6 @@ export class BundleManager {
     let beneficiary = this.beneficiary;
     if (currentBalance.lte(this.minSignerBalance)) {
       beneficiary = await this.signer.getAddress();
-      console.log(
-        'low balance. using ',
-        beneficiary,
-        'as beneficiary instead of ',
-        this.beneficiary,
-      );
     }
     return beneficiary;
   }

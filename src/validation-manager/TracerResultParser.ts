@@ -68,10 +68,7 @@ function parseCallStack(tracerResults: BundlerTracerResult): CallEntry[] {
     .filter((x) => !x.type.startsWith('depth'))
     .forEach((c) => {
       if (c.type.match(/REVERT|RETURN/) != null) {
-        const top = stack.splice(-1)[0] ?? {
-          type: 'top',
-          method: 'validateUserOp',
-        };
+        const top = stack.splice(-1)[0] ?? { type: 'top', method: 'validateUserOp' };
         const returnData: string = (c as any).data;
         if (top.type.match(/CREATE/) != null) {
           out.push({
@@ -112,9 +109,6 @@ function parseCallStack(tracerResults: BundlerTracerResult): CallEntry[] {
         stack.push(c);
       }
     });
-
-  // TODO: verify that stack is empty at the end.
-
   return out;
 }
 
@@ -433,9 +427,7 @@ export function tracerResultParser(
       entStake: StakeInfo | undefined,
       failureMessage: string,
     ): void {
-      if (!cond) {
-        return;
-      }
+      if (!cond) return;
       if (entStake == null) {
         throw new Error(
           `internal: ${entityTitle} not in userOp, but has storage accesses in ${JSON.stringify(access)}`,

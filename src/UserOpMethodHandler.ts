@@ -73,9 +73,7 @@ export class UserOpMethodHandler {
     const userOp = (await resolveProperties(userOp1)) as any;
 
     const fields = ['sender', 'nonce', 'initCode', 'callData', 'paymasterAndData'];
-    if (requireSignature) {
-      fields.push('signature');
-    }
+    if (requireSignature) fields.push('signature');
     if (requireGasParams) {
       fields.push(
         'preVerificationGas',

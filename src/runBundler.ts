@@ -86,7 +86,6 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     }
     const newMnemonic = Wallet.createRandom().mnemonic.phrase;
     fs.writeFileSync(mnemonicFile, newMnemonic);
-    console.log('created mnemonic file', mnemonicFile);
     process.exit(1);
   }
   const { config, provider, wallet } = await resolveConfiguration(programOpts);
@@ -94,12 +93,7 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
   const { chainId } = await provider.getNetwork();
 
   if (chainId === 31337 || chainId === 1337) {
-    if (config.debugRpc == null) {
-      console.log('== debugrpc was', config.debugRpc);
-      config.debugRpc = true;
-    } else {
-      console.log('== debugrpc already st', config.debugRpc);
-    }
+    if (config.debugRpc == null) config.debugRpc = true;
     await new DeterministicDeployer(provider as any).deterministicDeploy(
       EntryPoint__factory.bytecode,
     );

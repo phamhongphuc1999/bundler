@@ -70,9 +70,7 @@ export class ValidationManager {
   ): ValidationResult {
     if (!errorResult?.errorName?.startsWith('ValidationResult')) {
       let paymaster = errorResult.errorArgs.paymaster;
-      if (paymaster === AddressZero) {
-        paymaster = undefined;
-      }
+      if (paymaster === AddressZero) paymaster = undefined;
       const msg: string = errorResult.errorArgs?.reason ?? errorResult.toString();
 
       if (paymaster == null) {
@@ -89,13 +87,8 @@ export class ValidationManager {
       }
     }
 
-    const {
-      returnInfo,
-      senderInfo,
-      factoryInfo,
-      paymasterInfo,
-      aggregatorInfo, // may be missing (exists only SimulationResultWithAggregator
-    } = errorResult.errorArgs;
+    const { returnInfo, senderInfo, factoryInfo, paymasterInfo, aggregatorInfo } =
+      errorResult.errorArgs;
     function fillEntity(data: BytesLike, info: StakeInfo): StakeInfo | undefined {
       const addr = getAddr(data);
       return addr == null ? undefined : { ...info, addr };
@@ -142,10 +135,7 @@ export class ValidationManager {
     try {
       const { name: errorName, args: errorArgs } = this.entryPoint.interface.parseError(data);
       const errFullName = `${errorName}(${errorArgs.toString()})`;
-      const errorResult = this._parseErrorResult(userOp, {
-        errorName,
-        errorArgs,
-      });
+      const errorResult = this._parseErrorResult(userOp, { errorName, errorArgs });
       if (!errorName.includes('Result')) throw new Error(errFullName);
       debug(
         '==dump tree=',
