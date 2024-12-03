@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/providers';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import Debug from 'debug';
-import { Signer, utils } from 'ethers';
+import { BigNumber, Signer, utils } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import express, { type Express, type Request, type Response } from 'express';
 import { Server } from 'http';
@@ -75,7 +75,7 @@ export class BundlerServer {
     if (bal.eq(0)) this.fatal('cannot run with zero balance');
     else if (bal.lt(parseEther(this.config.minBalance))) {
       console.log('WARNING: initial balance below --minBalance ', this.config.minBalance);
-    }
+    } else console.log('INFORMATION: balance ', bal.toString());
   }
 
   fatal(msg: string): never {
