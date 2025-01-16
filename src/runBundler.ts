@@ -89,7 +89,6 @@ export async function runBundler(argv: string[], overrideExit = true): Promise<B
     process.exit(1);
   }
   const { config, provider, wallet } = await resolveConfiguration(programOpts);
-
   const { chainId } = await provider.getNetwork();
 
   if (chainId === 31337 || chainId === 1337) {

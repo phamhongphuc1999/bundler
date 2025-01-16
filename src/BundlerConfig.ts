@@ -46,7 +46,8 @@ export const BundlerConfigShape = {
 
 export const bundlerConfigDefault: Partial<BundlerConfig> = {
   port: '3000',
-  entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+  // entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
+  entryPoint: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
   unsafe: false,
   conditionalRpc: false,
   minStake: MIN_STAKE_VALUE,

@@ -3,7 +3,7 @@ import { Provider } from '@ethersproject/providers';
 import bodyParser from 'body-parser';
 import cors from 'cors';
 import Debug from 'debug';
-import { BigNumber, Signer, utils } from 'ethers';
+import { Signer } from 'ethers';
 import { parseEther } from 'ethers/lib/utils';
 import express, { type Express, type Request, type Response } from 'express';
 import { Server } from 'http';
