@@ -1,6 +1,6 @@
 {
   "gasFactor": "1",
-  "port": "3000",
+  "port": "3025",
   "network": "https://bsc-testnet-rpc.publicnode.com",
   "entryPoint": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
   "beneficiary": "0x0E043E83C116546737b49d0887d6CCe29f7bFD4d",

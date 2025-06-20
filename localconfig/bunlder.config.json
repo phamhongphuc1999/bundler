@@ -1,8 +1,8 @@
 {
   "gasFactor": "1",
   "port": "3025",
-  "network": "http://127.0.0.1:8545/",
-  "entryPoint": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+  "network": "https://bsc-testnet-rpc.publicnode.com",
+  "entryPoint": "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789",
   "beneficiary": "0x0E043E83C116546737b49d0887d6CCe29f7bFD4d",
   "minBalance": "0.1",
   "mnemonic": "./localconfig/private-key.txt",
